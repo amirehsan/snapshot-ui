@@ -876,6 +876,8 @@ panel folded to its header.
 | a field | pill | 6px | its field button | a circle | 6px | 0 |
 | MultiSelect's frame | half a field | 6px | a tag | 18px | 6px | 0 |
 | TagInput's frame, MultiSelect's by selector | half a field | 6px | a tag | 18px | 6px | 0 |
+| Card | stadium | 1 + 32px (20px compact) | a choice card, anywhere in it | the formula, at least the micro step: 7px, 19px compact | the micro step | 0 |
+| a choice card | its own corner: surface on the page, the formula in a Card | 1 + 16px | a list thumbnail | 7px on the page; the micro step in a Card, at most the card's corner | the micro step | 0 |
 
 And the controls that move, by the corner inset (below):
 
@@ -13902,3 +13904,166 @@ React Aria's English "Press Delete to remove tag." on a tag. Not yet
 verified on a real Android phone with its own keyboard, on an iPhone, with a Persian
 and a Chinese input method, in Windows' contrast themes, or on phones at
 320px to 430px.
+
+## ChoiceCards
+
+A single choice drawn as cards: a plan with its price, a theme with its
+picture, an account type with its icon (choices spec, section 7; plan Task 3).
+It is React Aria's radio group, taken whole: one tab stop, the arrows, native
+radios with `name` and `value`, required and invalid, and the form's reset.
+Each card is a `label` around its radio, so a press anywhere on it chooses
+it, before hydration too.
+
+**The card is a control's surface** (open question 16). Raised, the control
+fill, with a 1px `--color-boundary` edge: 3.06 against canvas and 3.36 against
+lifted in light, 6.20 and 5.59 in dark, above 1.4.11's 3:1. Its padding is
+16px, RadioGroup's row side padding, so a card's text starts where a radio
+row's dot would, and its media, text and dot are 12px apart, RadioGroup's gap
+between dot and label. The card is a flex row of those three, so a card with
+no media has no gap before its text. Text is the body step: the title at 500
+in ink, the detail at the small step and 500 in ink with tabular figures at
+the end of the title's line, and the sentence at the small step and 450 in
+slate, a part step under the title. A title too long to share its line with
+the detail takes the line, and the detail moves to the end of the next, so
+neither breaks a word to make room.
+
+**Chosen is ink and a check, not a fill** (ruling 16). The edge turns ink and
+2px wide and RadioGroup's 20px dot fills ink with the canvas check, the
+checked checkbox's look on a round dot; the content does not change. Two cues
+that are not color: the edge's weight and the check's shape. A RadioGroup row
+fills ink when chosen, which suits a pill holding one label; a card holding a
+sentence, a price and a picture would invert all of them, and a picture
+cannot invert. Signal orange is consent only and link blue is for links, so
+neither marks a choice, and success never does.
+
+**The edge is a border and an `::after`, so nothing moves.** The state's color
+is on the card's 1px border, and an `::after` inside the border, over the
+content and with the card's corner less 1px, adds the rest of the width: 1px
+more when chosen, 0.5px more when invalid, the 1.5px error edge RadioGroup's
+rows take. Drawn over the content, it crosses the top of a picture flush with
+the card, and no box changes size between states. An engine draws a border
+in whole device pixels, so the invalid edge is 2px on a 1x screen.
+
+**Hover** where hover exists, on a card that is not chosen, disabled or read
+only: the 5% ink wash over Raised and the edge firming to ink at 70%,
+RadioGroup's values, since the wash lowers the boundary against the page. The
+wash measures 1.11 against Raised in light and 1.16 in dark, a cue and not an
+edge; the 70% edge against it 6.53 and 7.34; ink on it 16.65 and 13.24 and
+slate 4.96 and 5.84. Pressed shows the same, since touch has no hover. These
+are mixes and are recorded, not gated. **Focus** is the standard 2px ink ring
+2px outside the card, following its corner; a card is never ink-filled, so the
+ring never inverts.
+
+**States from the native input.** Every state reads React Aria's attribute
+and the radio inside, as `:is([data-selected], :where(:has(input:checked)))`,
+RadioGroup's pattern, so before hydration a press checks a radio and draws
+the card chosen. The server writes `data-selected` on the card it draws
+chosen, and before hydration nothing takes it off when a press checks
+another, so a card whose own radio is unchecked is never drawn chosen, by a
+test in `:where()` that adds no weight (plan, spec correction 41).
+`BeforeHydration` presses a card of the server's HTML with no script running
+and reads its edge, its dot and the edge of the card the server chose, in
+three engines.
+
+**Invalid, changed, disabled and read only** are RadioGroup's. An invalid
+group draws the error edge on every card, with the error line under them;
+changed is the Changed chip in the label row and no edge, since a choice's
+edge is its own boundary, and an unlabelled group sets `data-changed` alone.
+A disabled card takes the disabled fill, a 1px ink 15% edge, taupe words and
+icon, a picture at half opacity and `cursor: not-allowed`; a disabled, chosen
+card keeps its check at the boundary strength, 3.40 and 5.21 on the disabled
+fill, gated with RadioGroup. RadioGroup's recorded limit holds: do not disable
+the chosen card of a group a reader can still change. A read-only card takes
+no wash and no pointer.
+
+**Media.** An icon is 24px in ink, level with the title's first line. In a
+list a picture is a 4rem square thumbnail at the start, `object-fit: cover`;
+in a grid it is flush with the card's top and sides, at
+`--choice-card-picture-ratio` (16 by 9), square, and the card clips it to its
+own curve with `overflow: clip`. Media is decoration: the span that holds it
+is `aria-hidden`, so a picture's `alt` is never read, and the docs ask for
+`alt=""`.
+
+**The corner in a holder** (ruling 19). On the page a card takes the surface
+step. In a Card every card of the group takes the holder formula, wherever it
+falls in the group, StatTile's selectors and a card in a card's rule:
+`max(var(--radius-micro), calc(var(--holder-radius) - var(--holder-border) -
+var(--holder-pad)))`, 7px in Rounded, 19px compact, the micro step in Soft and
+0 in Square, so no card differs from the next. The corner lives in
+`--choice-card-radius`, which the parts inside read. A list thumbnail sits 1px
+and 16px from the card's top and start edges, inside its curve, so it takes
+the card's corner less 17px, never sharper than the micro step and never
+rounder than the card: 7px on the page in Rounded, the micro step in a Card or
+in Soft, 0 in Square. A grid picture is clipped by the card's own padding-box
+curve, which is concentric by construction. `CardCorners` measures each in
+every shape and density, in three engines.
+
+**A list or a grid, and no size container** (spec 9). A list is one column of
+cards a part step apart. A grid is
+`repeat(auto-fill, minmax(min(var(--choice-cards-min, 12rem), 100%), 1fr))`:
+as many columns of at least 12rem as there
+is room for, one column of 100% in a box narrower than that, and in a holder
+that sizes it from its content one column as wide as its widest card. Cards in
+a grid row stretch to one height and each dot stays at its title's first line
+(`EqualHeights`). No part is a size container, so nothing needs a stand-in
+width.
+
+**Words stay whole** (plan, spec corrections 22 and 40; settings corrections
+46 and 71). The group sets `overflow-wrap: break-word`, never `anywhere`,
+which a card in a Card would otherwise inherit, and keeps its automatic
+minimum; its column and the list's are 100%, the group's width where that is
+known and its longest word where a holder sizes it from its content. Inside a
+card the text has no minimum of its own, so a word longer than its line
+breaks inside the card, and the card is a flex row rather than a grid because
+a flex row still counts the text's longest word where the card is sized from
+its content, where a grid track counts nothing for an item with no minimum
+and broke every word of a squeezed card. In a grid card the dot shares the
+text's line, which a wrapping row does not count, so the text keeps the dot's
+room at its end and the dot is drawn into it. `InAFlexRow` finds no word on
+two lines in a flex row and a squeezed one, in three engines; two groups side
+by side are wider than a phone by their longest words, so an app gives their
+wrappers `min-width: 0` where words may break, as the docs say.
+
+**Keys** (spec 7.3). The arrows move focus and the choice together in reading
+order and wrap, the WAI-ARIA radio group pattern, whatever the layout. A grid
+is a horizontal group, so Left and Right mirror in right to left; a list is a
+vertical group, as RadioGroup's stack, so Left and Right are previous and next
+in either direction, React Aria's rule (plan, spec correction 42). `Keys`
+proves both in three engines. A press and the arrows keep focus on a radio of
+the group and never let it fall to the body (`FocusStays`).
+
+**The name is the title alone** (spec 11 item 12; risk R5). Text inside a
+`label` joins its input's name, so the sentence and the detail would be read
+twice. Each radio takes `aria-labelledby` its title's id and
+`aria-describedby` its sentence's id, then its detail's, before what React
+Aria adds; an app's own `aria-label` or `aria-labelledby` wins over the
+title. `NamesByTitle` reads each name and description in the engine's own
+computation. Nothing interactive goes in a card: a link or a button in a
+label is a control in a control, so a development warning fires once when a
+card holds one.
+
+**Right to left.** Logical properties throughout: the media at the right, the
+dot at the left, the detail at the title line's end on the left; an amount an
+app marks `dir="ltr"` keeps its figures in order. `ChoiceCardsMirrored`
+measures each and Arrow Left choosing the next card of a grid, in three
+engines.
+
+**Forced colors.** The edge is a border and survives in `canvastext`; the
+chosen edge and the dot's fill take `highlight` and the check `highlighttext`,
+the dot drawn with `forced-color-adjust: none`, as SegmentedControl's chosen
+option; a disabled card is `graytext`. The docs' forced-colors test reads the
+chosen card's edge, its `::after`, its dot and its check.
+
+**Density and pointer.** A card is sized by its content, not a control
+height, so compact changes only its corner in a compact Card. A card is at
+least 56px tall, its padding and a 24px icon or a title's line, above every
+target size.
+
+**The size.** `{ ChoiceCards, ChoiceCard }` measures 1.34 kB without React
+Aria, Lucide and `@internationalized/date`, inside the spec's 2 kB budget; the
+rule gives a 2 kB limit. With React Aria not ignored it measures 16.32 kB.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): a card read as its title, its position and its state, then
+its sentence and detail, never its picture's text. Not yet verified in
+Windows' contrast themes or on phones at 320px to 430px.

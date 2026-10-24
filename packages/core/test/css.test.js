@@ -11492,6 +11492,278 @@ describe('src/components/accordion.css', () => {
   });
 });
 
+describe('src/components/choice-cards.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/choice-cards.css')));
+  /** Every rule that holds declarations, as its selector and its declarations, media blocks included. */
+  const all = () =>
+    [...rules().matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selector = '', body = '']) => ({
+      selector: selector.trim(),
+      body: body.trim(),
+    }));
+  /** The declarations after `header`, trimmed. */
+  const block = (css, header) => blockAfter(css, header).trim();
+  const CHOSEN = ':is([data-selected], :where(:has(input:checked))):where(:not(:has(input:not(:checked))))';
+  const DISABLED = ':is([data-disabled], :where(:has(input:disabled)))';
+  const FOCUSED = ':is([data-focus-visible], :where(:has(input:focus-visible)))';
+
+  it('lays out a list and an auto-filling grid of min(--choice-cards-min, 100%) columns, with no size container', () => {
+    const items = block(rules(), '.choice-cards-items {');
+    expect(items).toContain('display: grid;');
+    expect(items).toContain('gap: var(--spacing-part);');
+    // A list is one column of 100%: the group's width where that is known, so a long word breaks inside a card,
+    // and the widest card's longest word where a holder sizes the group from its content (plan, spec correction
+    // 22; settings corrections 46 and 71).
+    expect(items).toContain('grid-template-columns: 100%;');
+    expect(block(rules(), ".choice-cards[data-layout='grid'] .choice-cards-items {")).toBe(
+      'grid-template-columns: repeat(auto-fill, minmax(min(var(--choice-cards-min, 12rem), 100%), 1fr));',
+    );
+    // The field's own column is minmax(0, 1fr), which would let a squeezing holder take the group under a word.
+    expect(block(rules(), '.choice-cards {')).toContain('grid-template-columns: 100%;');
+    expect(block(rules(), '.choice-card-field {')).toContain('grid-template-columns: 100%;');
+    expect(rules()).not.toMatch(/container(?:-type)?:|contain:/);
+    expect(rules()).not.toContain('minmax(0');
+    // Words break only when one alone is wider than its line, never anywhere, which would break a word in a holder
+    // sized by its content; a card in a Card inherits the card's anywhere, so the group sets it again.
+    expect(block(rules(), '.choice-cards {')).toContain('overflow-wrap: break-word;');
+    expect(rules()).not.toContain('anywhere');
+    // A card is a flex row whose text has a zero minimum of its own, so a long word breaks inside it, while the row
+    // counts its longest word where the card is sized from its content: a grid track counts nothing there, and
+    // broke every word of a squeezed card (plan, spec correction 40).
+    const card = block(rules(), '.choice-card {');
+    expect(card).toContain('display: flex;');
+    expect(card).toContain('column-gap: 0.75rem;');
+    expect(card).not.toContain('grid');
+    const text = block(rules(), '.choice-card-text {');
+    expect(text).toContain('display: flex;');
+    expect(text).toContain('flex: 1 1 0;');
+    expect(text).toContain('flex-wrap: wrap;');
+    expect(text).toContain('min-inline-size: 0;');
+    // The title's basis is its own width, so a title too long for its line with the detail takes the line and the
+    // detail moves to the end of the next, rather than a word breaking to make room.
+    const title = block(rules(), '.choice-card-title {');
+    expect(title).toContain('flex: 1 1 auto;');
+    expect(title).toContain('min-inline-size: 0;');
+    expect(block(rules(), '.choice-card-detail {')).toContain('margin-inline-start: auto;');
+    expect(block(rules(), '.choice-card-description {')).toContain('flex: 1 1 100%;');
+  });
+
+  it("never draws a card chosen whose own radio is unchecked, as a server's data-selected before hydration", () => {
+    const chosen = all().filter(
+      ({ selector }) => selector.includes('[data-selected]') && !selector.includes(':not(['),
+    );
+    expect(chosen.length).toBeGreaterThanOrEqual(4);
+    for (const { selector } of chosen) expect(selector).toContain(CHOSEN);
+  });
+
+  it('stretches cards in a grid row to one height and keeps the dot at the first line', () => {
+    // The media takes a line of its own, and the lines keep their height when a neighbor stretches the card.
+    const grid = block(rules(), ".choice-cards[data-layout='grid'] .choice-card {");
+    expect(grid).toContain('flex-wrap: wrap;');
+    expect(grid).toContain('align-content: flex-start;');
+    expect(block(rules(), ".choice-cards[data-layout='grid'] .choice-card-media {")).toContain(
+      'flex-basis: 100%;',
+    );
+    expect(block(rules(), '.choice-card {')).toContain('align-items: flex-start;');
+    expect(block(rules(), '.choice-card > .radio-indicator {')).toContain(
+      'margin-block: calc((1lh - 20px) / 2);',
+    );
+    expect(block(rules(), ".choice-card-media[data-media='icon'] {")).toContain(
+      'margin-block: calc((1lh - 24px) / 2);',
+    );
+    // A wrapping row does not count the dot beside the text where the card is sized from its content, so in the
+    // grid the text keeps the dot's room and the dot is drawn into it.
+    expect(block(rules(), ".choice-cards[data-layout='grid'] .choice-card-text {")).toBe(
+      'padding-inline-end: calc(20px + 0.75rem);',
+    );
+    expect(block(rules(), ".choice-cards[data-layout='grid'] .choice-card > .radio-indicator {")).toBe(
+      'margin-inline-start: calc(-20px - 0.75rem);',
+    );
+    // Flex gaps fall only between parts that are there, so the media and the dot carry no margin of their own.
+    for (const header of ['.choice-card-media {', '.choice-card > .radio-indicator {'])
+      expect(block(rules(), header), header).not.toContain('margin-inline');
+  });
+
+  it('draws the chosen and invalid edges as the border and an ::after inside it, so nothing moves', () => {
+    const card = block(rules(), '.choice-card {');
+    for (const declaration of [
+      'position: relative;',
+      'box-sizing: border-box;',
+      'padding: 1rem;',
+      'border: 1px solid var(--choice-card-edge, var(--color-boundary));',
+      'border-radius: var(--choice-card-radius, var(--radius-surface));',
+      'background-color: var(--color-raised);',
+      'color: var(--color-ink);',
+      'overflow: clip;',
+      'cursor: pointer;',
+    ]) {
+      expect(card, declaration).toContain(declaration);
+    }
+    const edge = block(rules(), '.choice-card::after {');
+    for (const declaration of [
+      "content: '';",
+      'position: absolute;',
+      'inset: 0;',
+      'border: var(--choice-card-edge-more, 0px) solid var(--choice-card-edge, var(--color-boundary));',
+      'border-radius: max(0px, calc(var(--choice-card-radius, var(--radius-surface)) - 1px));',
+      'pointer-events: none;',
+    ]) {
+      expect(edge, declaration).toContain(declaration);
+    }
+    const chosen = block(rules(), `.choice-card${CHOSEN} {`);
+    expect(chosen).toContain('--choice-card-edge: var(--color-ink);');
+    expect(chosen).toContain('--choice-card-edge-more: 1px;');
+    const invalid = block(rules(), '.choice-cards[data-invalid] .choice-card {');
+    expect(invalid).toContain('--choice-card-edge: var(--color-error);');
+    expect(invalid).toContain('--choice-card-edge-more: 0.5px;');
+    // Invalid comes after every state that sets the edge, at least as heavy, so the error edge holds through them.
+    const at = (header) => rules().indexOf(header);
+    expect(at('.choice-cards[data-invalid] .choice-card {')).toBeGreaterThan(at(`.choice-card${CHOSEN} {`));
+    expect(at('.choice-cards[data-invalid] .choice-card {')).toBeGreaterThan(at('@media (hover: hover)'));
+    // Nothing that moves the box changes with a state: no padding, border width or margin in a state rule.
+    for (const { selector, body } of all()) {
+      if (!/\[data-(?!media|layout)|:has\(input/.test(selector)) continue;
+      expect(body, selector).not.toMatch(/(?:^|; )(?:padding|margin|border-width|border):/);
+    }
+  });
+
+  it('takes the holder formula for every card in a Card', () => {
+    expect(block(rules(), ':is(.card > .choice-cards, .card-body .choice-cards) .choice-card {')).toBe(
+      '--choice-card-radius: max(var(--radius-micro), calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)));',
+    );
+    // Every radius in the file reads the card's corner or a token.
+    for (const [, radius = ''] of rules().matchAll(/border-radius: ([^;]+);/g)) {
+      expect(radius).toMatch(/^(?:0|var\(--|max\(|min\()/);
+    }
+  });
+
+  it('clamps the list thumbnail between the micro step and the card corner', () => {
+    const thumbnail = block(
+      rules(),
+      ".choice-cards[data-layout='list'] .choice-card-media[data-media='picture'] {",
+    );
+    for (const declaration of [
+      'inline-size: 4rem;',
+      'block-size: 4rem;',
+      'overflow: clip;',
+      'border-radius: min(var(--choice-card-radius, var(--radius-surface)), max(var(--radius-micro), calc(var(--choice-card-radius, var(--radius-surface)) - 1px - 1rem)));',
+    ]) {
+      expect(thumbnail, declaration).toContain(declaration);
+    }
+    expect(block(rules(), '.choice-card-media img {')).toContain('object-fit: cover;');
+    // In the grid the picture is flush with the card's top and sides, square, and the card clips it.
+    const flush = block(
+      rules(),
+      ".choice-cards[data-layout='grid'] .choice-card-media[data-media='picture'] {",
+    );
+    expect(flush).toContain('margin: -1rem -1rem 0.75rem;');
+    expect(flush).toContain('inline-size: calc(100% + 2rem);');
+    expect(flush).toContain('aspect-ratio: var(--choice-card-picture-ratio, 16 / 9);');
+    expect(flush).not.toContain('radius');
+  });
+
+  it('sets the dot through --radio-ring, --radio-dot and --radio-glyph, chosen ink with a canvas check', () => {
+    const card = block(rules(), '.choice-card {');
+    expect(card).toContain('--radio-ring: var(--color-boundary);');
+    expect(card).toContain('--radio-dot: var(--color-raised);');
+    expect(card).toContain('--radio-glyph: transparent;');
+    const chosen = block(rules(), `.choice-card${CHOSEN} {`);
+    expect(chosen).toContain('--radio-ring: var(--color-ink);');
+    expect(chosen).toContain('--radio-dot: var(--color-ink);');
+    expect(chosen).toContain('--radio-glyph: var(--color-canvas);');
+    // A disabled, chosen card keeps its check, at the boundary strength on the disabled fill, RadioGroup's rule.
+    const both = block(rules(), `.choice-card${DISABLED}${CHOSEN} {`);
+    expect(both).toContain('--radio-ring: var(--color-boundary);');
+    expect(both).toContain('--radio-glyph: var(--color-boundary);');
+    // The card never reuses RadioGroup's row class, so no RadioGroup rule reaches it.
+    expect(rules()).not.toMatch(/\.radio(?![-\w])/);
+  });
+
+  it('reads every state from the native input as well as the data attribute', () => {
+    const states = all().filter(({ selector }) => /\.choice-card(?![-\w])/.test(selector));
+    for (const { selector } of states) {
+      for (const [attribute, native] of [
+        ['[data-selected]', ':where(:has(input:checked))'],
+        ['[data-disabled]', ':where(:has(input:disabled))'],
+        ['[data-focus-visible]', ':where(:has(input:focus-visible))'],
+      ]) {
+        if (selector.includes(attribute)) expect(selector, attribute).toContain(native);
+      }
+    }
+    const ring = block(rules(), `.choice-card${FOCUSED} {`);
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: var(--focus-ring-offset);');
+    const disabled = block(rules(), `.choice-card${DISABLED} {`);
+    for (const declaration of [
+      '--choice-card-edge: color-mix(in srgb, var(--color-ink) 15%, transparent);',
+      'background-color: var(--color-disabled);',
+      'color: var(--color-taupe);',
+      'cursor: not-allowed;',
+    ]) {
+      expect(disabled, declaration).toContain(declaration);
+    }
+    expect(block(rules(), `.choice-card${DISABLED} .choice-card-media img {`)).toContain('opacity: 0.5;');
+    expect(block(rules(), '.choice-card[data-readonly] {')).toContain('cursor: default;');
+  });
+
+  it('sets the text: a 500 title and detail, a 450 sentence in slate a part step under', () => {
+    const title = block(rules(), '.choice-card-title {');
+    expect(title).toContain('font-weight: 500;');
+    const detail = block(rules(), '.choice-card-detail {');
+    expect(detail).toContain('font-size: var(--text-small);');
+    expect(detail).toContain('font-weight: 500;');
+    expect(detail).toContain('font-variant-numeric: tabular-nums;');
+    const sentence = block(rules(), '.choice-card-description {');
+    expect(sentence).toContain('font-size: var(--text-small);');
+    expect(sentence).toContain('font-weight: 450;');
+    expect(sentence).toContain('color: var(--color-slate);');
+    expect(sentence).toContain('margin-block-start: var(--spacing-part);');
+    expect(rules()).not.toMatch(/font-weight: 600/);
+  });
+
+  it('keeps hover inside a hover media query and draws a forced-colors block with highlight for the chosen card', () => {
+    const css = rules();
+    const hover = blockAfter(css, '@media (hover: hover)');
+    expect(hover).toContain(':hover');
+    expect(hover).toContain(
+      'background-color: color-mix(in srgb, var(--color-ink) 5%, var(--color-raised));',
+    );
+    expect(hover).toContain('--choice-card-edge: color-mix(in srgb, var(--color-ink) 70%, transparent);');
+    const forced = blockAfter(css, FORCED_COLORS);
+    const outside = css
+      .replace(`@media (hover: hover) {${hover}}`, '')
+      .replace(`${FORCED_COLORS} {${forced}}`, '');
+    expect(outside).not.toContain(':hover');
+    // The press twin is outside it, since touch has no hover.
+    expect(outside).toMatch(/\.choice-card:is\(:active, \[data-pressed\]\):not\(/);
+    // Hover and press skip a chosen, disabled or read-only card.
+    for (const twin of [hover, outside]) {
+      const rule =
+        /\.choice-card:is\((?::hover, \[data-hovered\]|:active, \[data-pressed\])\):not\(([^{]+)\) \{/.exec(
+          twin,
+        );
+      expect(rule?.[1]).toContain('[data-selected]');
+      expect(rule?.[1]).toContain('[data-disabled]');
+      expect(rule?.[1]).toContain('[data-readonly]');
+    }
+    expect(block(forced, '.choice-card {')).toContain('--choice-card-edge: canvastext;');
+    const chosen = block(forced, `.choice-card${CHOSEN} {`);
+    expect(chosen).toContain('--choice-card-edge: highlight;');
+    expect(chosen).toContain('--radio-dot: highlight;');
+    expect(chosen).toContain('--radio-glyph: highlighttext;');
+    expect(block(forced, '.choice-card > .radio-indicator {')).toContain('forced-color-adjust: none;');
+    expect(block(forced, `.choice-card${DISABLED} {`)).toContain('color: graytext;');
+  });
+
+  it('uses logical properties only', () => {
+    for (const { selector, body } of all()) {
+      expect(body, selector).not.toMatch(
+        /(?:margin|padding|border)-(?:left|right|top|bottom)|(?<![\w-])(?:left|right|top|bottom|width|height|min-width|min-height)\s*:/,
+      );
+    }
+  });
+});
+
 describe('the choices files', () => {
   const FILES = ['accordion.css', 'tag-input.css', 'choice-cards.css', 'position-pad.css'].filter((file) =>
     components.includes(file),
@@ -11971,6 +12243,7 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
   const FILLS = [
     ['tabs.css', '.tab {'],
     ['stat-tile.css', '.card > .stat-tile, .card-body .stat-tile {'],
+    ['choice-cards.css', ':is(.card > .choice-cards, .card-body .choice-cards) .choice-card {'],
     ['select.css', '.select-filter {'],
   ];
 

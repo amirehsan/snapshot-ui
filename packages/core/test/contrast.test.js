@@ -2436,3 +2436,89 @@ describe('the tag input', () => {
     }
   });
 });
+
+describe('the choice cards', () => {
+  const palette = (mode) => paletteFor(tokens, mode);
+  /** `name` painted over `groundName` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const ground = parseColor(palette(mode)[groundName]);
+    return contrastRatio(composite(parseColor(palette(mode)[name]), ground), ground);
+  };
+  /** Ink at `share`, as `color-mix(in srgb, var(--color-ink) <share>, transparent)` paints it, over `ground`. */
+  const inkAt = (mode, share, ground) => {
+    const ink = parseColor(palette(mode).ink);
+    return composite({ ...ink, a: ink.a * share }, ground);
+  };
+
+  // A card is a control's surface: Raised, a boundary edge, ink titles and details, a slate sentence, an ink dot
+  // with a canvas check when chosen, and the error edge when invalid. The gate holds every pair already, so the
+  // choice cards add none (spec 7.6).
+  it('cites ink and slate on Raised, canvas on ink, the boundary and the error edge, which the gate holds', () => {
+    for (const text of ['ink', 'slate', 'error']) {
+      expect(CONTRAST_PAIRS, `${text} on raised`).toContainEqual(
+        expect.objectContaining({ text, ground: 'raised', minimum: TEXT }),
+      );
+    }
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'canvas', ground: 'ink', minimum: TEXT }),
+    );
+    for (const ground of ['canvas', 'lifted']) {
+      expect(CONTRAST_PAIRS, `the boundary against ${ground}`).toContainEqual(
+        expect.objectContaining({ text: 'boundary', ground, fill: 'raised', minimum: NON_TEXT }),
+      );
+      expect(CONTRAST_PAIRS, `the error edge on ${ground}`).toContainEqual(
+        expect.objectContaining({ text: 'error', ground, minimum: TEXT }),
+      );
+    }
+    // The edge is the boundary over the card's Raised fill, against the page or the card it sits on.
+    const edge = (mode, ground) => {
+      const over = composite(parseColor(palette(mode).boundary), parseColor(palette(mode).raised));
+      return contrastRatio(over, parseColor(palette(mode)[ground]));
+    };
+    for (const { name, value, light, dark } of [
+      { name: 'ink on raised', value: (mode) => measured(mode, 'ink', 'raised'), light: 18.43, dark: 15.36 },
+      {
+        name: 'slate on raised',
+        value: (mode) => measured(mode, 'slate', 'raised'),
+        light: 5.49,
+        dark: 6.44,
+      },
+      { name: 'canvas on ink', value: (mode) => measured(mode, 'canvas', 'ink'), light: 16.25, dark: 19.31 },
+      { name: 'the edge on canvas', value: (mode) => edge(mode, 'canvas'), light: 3.06, dark: 6.2 },
+      { name: 'the edge on lifted', value: (mode) => edge(mode, 'lifted'), light: 3.36, dark: 5.59 },
+      {
+        name: 'the error edge on canvas',
+        value: (mode) => measured(mode, 'error', 'canvas'),
+        light: 6.58,
+        dark: 6.36,
+      },
+      {
+        name: 'the error edge on raised',
+        value: (mode) => measured(mode, 'error', 'raised'),
+        light: 7.46,
+        dark: 5.06,
+      },
+    ]) {
+      expect(value('light'), `${name}, light`).toBeCloseTo(light, 2);
+      expect(value('dark'), `${name}, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+
+  // Under the pointer a card takes RadioGroup's 5% ink wash over Raised and its edge firms to ink at 70%, since
+  // the wash lowers the boundary. Both are mixes, not tokens, so they are recorded and not gated.
+  it('recomputes the hover wash and the 70% ink edge, RadioGroup pairs', () => {
+    for (const { mode, wash, edge, ink, slate } of [
+      { mode: 'light', wash: 1.11, edge: 6.53, ink: 16.65, slate: 4.96 },
+      { mode: 'dark', wash: 1.16, edge: 7.34, ink: 13.24, slate: 5.84 },
+    ]) {
+      const raised = parseColor(palette(mode).raised);
+      const washed = inkAt(mode, 0.05, raised);
+      expect(contrastRatio(washed, raised), `the wash, ${mode}`).toBeCloseTo(wash, 2);
+      expect(contrastRatio(inkAt(mode, 0.7, washed), washed), `the edge, ${mode}`).toBeCloseTo(edge, 2);
+      const on = (name) => contrastRatio(composite(parseColor(palette(mode)[name]), washed), washed);
+      expect(on('ink'), `ink on the wash, ${mode}`).toBeCloseTo(ink, 2);
+      expect(on('slate'), `slate on the wash, ${mode}`).toBeCloseTo(slate, 2);
+      expect(on('slate')).toBeGreaterThanOrEqual(TEXT);
+    }
+  });
+});

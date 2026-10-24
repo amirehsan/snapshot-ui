@@ -1,0 +1,136 @@
+---
+title: Choice cards
+description: A single choice drawn as cards, with a sentence, a price, an icon or a picture.
+icon: LayoutList
+---
+
+<Section>
+
+## ChoiceCards or RadioGroup
+
+Both are one choice from a short list, and both are a radio group underneath. Use a [radio group](/docs/components/radio-group) when each option is a short label. Use choice cards when each option needs more to be chosen well: a sentence that says what it means, a detail such as a price, or a picture that shows it. A card is chosen by a press anywhere on it.
+
+<Preview name="choice-cards-list" />
+
+</Section>
+
+<Section>
+
+## List and grid
+
+The default `list` stacks full-width cards, each a row of an optional icon or thumbnail, the text and the dot. `layout="grid"` tiles them, each with its icon or picture on top.
+
+<Preview name="choice-cards-grid" />
+
+The grid fits as many columns of at least 12rem as its width has room for, and one column in a box narrower than that. Set `--choice-cards-min` on the group for wider or narrower columns. The grid needs no width of its own: in a holder that sizes it from its content, such as a flex row, it is one column as wide as its widest card. Cards in a row stretch to one height, and each dot stays level with its title's first line.
+
+The arrow keys move through the cards in reading order, whatever the layout, as the WAI-ARIA radio group pattern asks: in a grid three columns wide, Arrow Down goes to the next card, which may be to its right. For a choice that is a place, such as where to anchor a picture, use a position pad, whose arrows follow its grid.
+
+</Section>
+
+<Section>
+
+## Details and pictures
+
+A `detail` is a short value at the end of the title's line, such as a price, in tabular figures. A title too long to share its line moves the detail to the end of the next. On a right-to-left page, wrap an amount in an element with `dir="ltr"`, so its figures read left to right.
+
+<Preview name="choice-cards-details" />
+
+A `picture` is an `<img>` or a `<picture>`: a 4rem thumbnail at the start of a list card, and flush with the top and sides of a grid card, at 16 by 9 unless `--choice-card-picture-ratio` says otherwise. A picture is decoration and is never read, so give it `alt=""`. If the picture says something the title does not, it is the wrong part: say it in the title or the sentence. An `icon` is 24px, also decoration. A card takes one or the other; given both, it draws the picture and warns in development.
+
+</Section>
+
+<Section>
+
+## States
+
+A required group with nothing chosen fails on submit, and draws the error edge on every card with the error line under them. The Changed chip in the label row marks an unsaved choice, as on a radio group; a card draws no changed edge of its own. A disabled card is drawn on the disabled fill in taupe, and a disabled, chosen card keeps its check.
+
+<Preview name="choice-cards-states" />
+
+Do not disable the chosen card of a group the reader can still change: as on a radio group, only the chosen radio takes the tab stop, and a disabled one loses it, so Tab skips the group. A read-only group keeps its choice and takes no hover.
+
+</Section>
+
+<Section>
+
+## Content under a choice
+
+A card holds its title, its sentence, its detail and its media, and nothing more. To show fields under a chosen card, such as a company's tax number under "Business", put the group in [Conditional fields](/docs/components/conditional-fields), which shows the fields for the value chosen.
+
+</Section>
+
+<Section>
+
+## In a card
+
+In a [Card](/docs/components/card), every choice card takes the card's concentric corner, wherever it falls in the group: the card's corner less its edge and padding, 7px in the Rounded shape and 19px in compact density, the micro step in Soft, and square in Square. On the page a choice card takes the surface corner. A list thumbnail takes the card's corner less its distance from the edge, never sharper than the micro step and never rounder than the card.
+
+</Section>
+
+<Section>
+
+## Usage
+
+Choice cards are a radio group: give the group a `name`, and each card a `value`. The form submits the chosen value, `isRequired` stops an empty choice on submit, and a form's reset puts the default back. `value`, `defaultValue` and `onChange` work as on a radio group. Give the group a `name` no other radio on the page has outside its form: native radios outside a form share one group with every radio of the same name in the document, so a card chosen there would let go of the other.
+
+```tsx
+import { ChoiceCard, ChoiceCards } from '@snapshot-ui/react';
+
+export function PlanPicker() {
+  return (
+    <ChoiceCards label="Plan" name="plan" defaultValue="yearly" isRequired>
+      <ChoiceCard value="monthly" description="Billed every month." detail="$12 a month">
+        Monthly
+      </ChoiceCard>
+      <ChoiceCard value="yearly" description="Two months free." detail="$120 a year">
+        Yearly
+      </ChoiceCard>
+    </ChoiceCards>
+  );
+}
+```
+
+A card is a `label` around its radio, so put no link, button or other input inside it: a control inside a control cannot be reached or pressed reliably, and the card warns in development. Put a link to the plan's terms under the group instead.
+
+Choice cards are a client component that a server component can render, with plain props as on this page; the server's HTML holds every card, its native radio and the chosen one, so a press before the page's scripts run still chooses a card and draws it chosen.
+
+A card keeps its words whole. A word breaks only when it alone is wider than its line, and in a flex row or a grid track that sizes the group from its content, the group is never narrower than its longest word. Where a long word should break inside such a holder instead, give the group, or the wrapper that holds it, `min-width: 0`, as the examples on this page do.
+
+</Section>
+
+<Section>
+
+## Props
+
+Every React Aria RadioGroup prop is accepted on the group, except `orientation`: a list is a vertical group and a grid a horizontal one. `className`, `ref` and other HTML attributes go on the group's root; on a card, `className` and `ref` go on the card and `inputRef` on its radio.
+
+<PropsTable label="ChoiceCards props" path="../../packages/react/src/choice-cards/ChoiceCards.tsx" type="Pick<ChoiceCardsProps, 'label' | 'description' | 'errorMessage' | 'isChanged' | 'changedLabel' | 'layout' | 'value' | 'defaultValue' | 'onChange' | 'name' | 'isRequired' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'validate' | 'children'>" />
+
+<PropsTable label="ChoiceCard props" path="../../packages/react/src/choice-cards/ChoiceCards.tsx" type="Pick<ChoiceCardProps, 'value' | 'children' | 'description' | 'detail' | 'icon' | 'picture' | 'isDisabled' | 'inputRef'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A group of native radio inputs, named by its label: one tab stop, and the arrow keys move the choice. Each radio is named by its card's title alone and described by its sentence and then its detail, so a reader hears "Yearly, radio button, 2 of 3, checked, Two months free. $120 a year" and not the whole card twice. An app's own `aria-label` on a card names it instead. The icon, the picture and the dot are hidden from assistive technology. Rich content does not change the pattern: it is the WAI-ARIA radio group, with a hint per option as GOV.UK's radios have.
+
+<Keys rows={[['Tab Shift+Tab', 'Into the group, to the chosen card, or with none chosen the first card (the last, by Shift+Tab); out of it.'], ['Down Right', 'To the next card in reading order, choosing it; wraps to the first. In a right-to-left grid, Left is the next card.'], ['Up Left', 'To the previous card, choosing it; wraps to the last.'], ['Space', 'Chooses the focused card when nothing is chosen.']]} />
+
+- In a list, a vertical group, Left and Right are the previous and next card in either direction, as on a radio group. In a grid, a horizontal group, they follow the page's direction.
+- A press anywhere on a card chooses it, the label's own behavior, before and after the page hydrates. Focus moves to its radio.
+- The order a screen reader says the description in, and how VoiceOver and NVDA read a card, are not yet verified.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps choice cards in the system.
+
+<Rules dos={['Title each card in a few words, the name of the choice.', 'Add a sentence only when it helps the reader choose, and keep it to one.', 'Give every card in a group the same kind of media, or none.']} donts={['Never mark a chosen card with success green or signal orange. The ink edge and the check say chosen.', 'Never put a link or a button in a card. Put it under the group.', 'Never use choice cards for several choices. Use a checkbox group.']} />
+
+</Section>

@@ -1,4 +1,5 @@
 import { act } from '@testing-library/react';
+import { Monitor, Moon, Sun } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { hydrateRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
@@ -37,6 +38,7 @@ import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Accordion, AccordionItem } from '../src/accordion';
 import { TagInput, emailPreset } from '../src/tag-input';
+import { ChoiceCard, ChoiceCards } from '../src/choice-cards';
 import { Gauge } from '../src/gauge';
 import { MonthGrid } from '../src/month-grid';
 import {
@@ -182,6 +184,40 @@ function ServerInvite({
       maxValues={10}
       defaultValue={values}
     />
+  );
+}
+
+/** A plan choice as a billing page draws it on the server: three cards, the second chosen, each with a price. */
+function ServerPlans(): ReactElement {
+  return (
+    <ChoiceCards label="Plan" name="plan" defaultValue="yearly">
+      <ChoiceCard value="monthly" description="Billed every month." detail="$12 a month">
+        Monthly
+      </ChoiceCard>
+      <ChoiceCard value="yearly" description="Two months free." detail="$120 a year">
+        Yearly
+      </ChoiceCard>
+      <ChoiceCard value="starter" description="One account, no exports." detail="Free">
+        Starter
+      </ChoiceCard>
+    </ChoiceCards>
+  );
+}
+
+/** A theme choice drawn as a grid of icon cards on the server, the second chosen. */
+function ServerThemes(): ReactElement {
+  return (
+    <ChoiceCards label="Theme" name="theme" defaultValue="dark" layout="grid">
+      <ChoiceCard value="light" icon={<Sun />}>
+        Light
+      </ChoiceCard>
+      <ChoiceCard value="dark" icon={<Moon />}>
+        Dark
+      </ChoiceCard>
+      <ChoiceCard value="system" icon={<Monitor />}>
+        System
+      </ChoiceCard>
+    </ChoiceCards>
   );
 }
 
@@ -952,6 +988,32 @@ const HYDRATED: [
         [...container.querySelectorAll<HTMLInputElement>('input[type="hidden"]')].map((input) => input.value),
       ).toEqual(['']);
       expect(container.querySelector('.tag-input-tag')).toBeNull();
+    },
+  ],
+  [
+    // The cards, the second chosen, each radio named by its title and described by its sentence then its detail.
+    'ChoiceCards',
+    <ServerPlans />,
+    (container) => {
+      const radios = [...container.querySelectorAll<HTMLInputElement>('input[type="radio"]')];
+      expect(radios.map((radio) => radio.checked)).toEqual([false, true, false]);
+      expect(container.querySelector('label.choice-card[data-selected]')?.textContent).toContain('Yearly');
+      for (const radio of radios) {
+        const title = document.getElementById(radio.getAttribute('aria-labelledby') ?? '');
+        expect(title).toHaveClass('choice-card-title');
+        const [sentence, detail] = (radio.getAttribute('aria-describedby') ?? '').split(' ');
+        expect(document.getElementById(sentence ?? '')).toHaveClass('choice-card-description');
+        expect(document.getElementById(detail ?? '')).toHaveClass('choice-card-detail');
+      }
+      expect(document.activeElement).toBe(document.body);
+    },
+  ],
+  [
+    'ChoiceCards grid of icons',
+    <ServerThemes />,
+    (container) => {
+      expect(container.querySelectorAll('.choice-card-media[data-media="icon"] svg')).toHaveLength(3);
+      expect(container.querySelector<HTMLInputElement>('input[value="dark"]')?.checked).toBe(true);
     },
   ],
   [

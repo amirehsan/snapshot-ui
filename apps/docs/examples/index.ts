@@ -39,6 +39,10 @@ import CheckboxGroupExample from './checkbox-group';
 import CheckboxSelectAll from './checkbox-select-all';
 import CheckboxStates from './checkbox-states';
 import CheckboxValidation from './checkbox-validation';
+import ChoiceCardsDetails from './choice-cards-details';
+import ChoiceCardsGrid from './choice-cards-grid';
+import ChoiceCardsList from './choice-cards-list';
+import ChoiceCardsStates from './choice-cards-states';
 import CollapsibleCardActions from './collapsible-card-actions';
 import CollapsibleCardBasic from './collapsible-card-basic';
 import CollapsibleCardChanged from './collapsible-card-changed';
@@ -282,6 +286,10 @@ export const examples = {
   'checkbox-select-all': CheckboxSelectAll,
   'checkbox-states': CheckboxStates,
   'checkbox-validation': CheckboxValidation,
+  'choice-cards-details': ChoiceCardsDetails,
+  'choice-cards-grid': ChoiceCardsGrid,
+  'choice-cards-list': ChoiceCardsList,
+  'choice-cards-states': ChoiceCardsStates,
   'collapsible-card-actions': CollapsibleCardActions,
   'collapsible-card-basic': CollapsibleCardBasic,
   'collapsible-card-changed': CollapsibleCardChanged,

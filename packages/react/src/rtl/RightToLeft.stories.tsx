@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { House, Settings, ShoppingCart, User } from 'lucide-react';
+import { CalendarDays, CalendarRange, Gift, House, Settings, ShoppingCart, User } from 'lucide-react';
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { I18nProvider, type Key } from 'react-aria-components';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
@@ -10,6 +10,7 @@ import { Button } from '../button';
 import { RangeCalendar } from '../calendar';
 import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '../card';
 import { Checkbox, CheckboxGroup } from '../checkbox';
+import { ChoiceCard, ChoiceCards } from '../choice-cards';
 import { CollapsibleCard } from '../collapsible-card';
 import { ComboBox } from '../combo-box';
 import { CommandPalette } from '../command-palette';
@@ -2816,5 +2817,79 @@ export const TagInputMirrored: Story = {
     await waitFor(() => expect(second).toHaveFocus());
     // The shot shows the field at rest, with no ring.
     second.blur();
+  },
+};
+
+/**
+ * Choice cards in Persian, as a grid of plans with icons and left-to-right amounts as details: each card's icon at
+ * the right, its dot at the left, its amount at the title line's end, on the left, and left to right inside, and
+ * Arrow Left choosing the next card, since a grid runs in rows.
+ */
+export const ChoiceCardsMirrored: Story = {
+  tags: ['!no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" data-font="vazirmatn" style={{ width: 'min(40rem, calc(100vw - 2rem))' }}>
+        <ChoiceCards label="طرح" name="plan" layout="grid" defaultValue="monthly">
+          <ChoiceCard
+            value="monthly"
+            icon={<CalendarDays />}
+            description="هر ماه پرداخت می‌کنید."
+            detail={<span dir="ltr">$12</span>}
+          >
+            ماهانه
+          </ChoiceCard>
+          <ChoiceCard
+            value="yearly"
+            icon={<CalendarRange />}
+            description="دو ماه رایگان."
+            detail={<span dir="ltr">$120</span>}
+          >
+            سالانه
+          </ChoiceCard>
+          <ChoiceCard
+            value="gift"
+            icon={<Gift />}
+            description="برای یک نفر دیگر."
+            detail={<span dir="ltr">$99</span>}
+          >
+            هدیه
+          </ChoiceCard>
+        </ChoiceCards>
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    await document.fonts.load('500 16px Vazirmatn', 'ماهانه');
+    await document.fonts.ready;
+    const cards = [...canvasElement.querySelectorAll<HTMLElement>('label.choice-card')];
+    for (const card of cards) {
+      const box = rect(card);
+      const icon = rect(find(card, '.choice-card-media'));
+      const dot = rect(find(card, '.radio-indicator'));
+      const detailBox = rect(find(card, '.choice-card-detail'));
+      // The icon at the start, the right, inside the padding; the dot at the end, the left of the text.
+      await expect(box.right - icon.right).toBeLessThan(20);
+      await expect(dot.left - box.left).toBeLessThan(20);
+      await expect(dot.right).toBeLessThanOrEqual(detailBox.left + 0.5);
+      // The amount at the title line's end, on the left, its first figure at its box's left.
+      const detail = find(card, '.choice-card-detail');
+      const amount = find(detail, 'span');
+      await expectSameEdge(characterBox(amount, 0).left, rect(detail).left);
+      await expect(getComputedStyle(amount).direction).toBe('ltr');
+      await expect(rect(detail).right).toBeLessThanOrEqual(rect(find(card, '.choice-card-title')).left + 0.5);
+    }
+    const scope = within(canvasElement);
+    const monthly = scope.getByRole('radio', { name: 'ماهانه' });
+    await waitFor(() => {
+      if (document.activeElement !== monthly) monthly.focus();
+      return expect(monthly).toHaveFocus();
+    });
+    await userEvent.keyboard('{ArrowLeft}');
+    await waitFor(() => expect(scope.getByRole('radio', { name: 'سالانه' })).toBeChecked());
+    await userEvent.keyboard('{ArrowRight}');
+    await waitFor(() => expect(monthly).toBeChecked());
+    // The shot shows the group at rest, with no ring.
+    monthly.blur();
   },
 };

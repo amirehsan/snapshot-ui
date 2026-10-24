@@ -162,6 +162,27 @@ test.describe('forced colors', () => {
     expect((await paint(glyph)).text).not.toBe(await systemColor(page, 'canvas'));
   });
 
+  test('a chosen card keeps its edge and its dot in highlight', async ({ page }) => {
+    await visit(page, '/docs/components/choice-cards');
+    const group = page.locator('.stage .choice-cards').first();
+    const chosen = group.locator('label.choice-card[data-selected]');
+    const other = group.locator('label.choice-card:not([data-selected])').first();
+    await expect(chosen).toHaveCount(1);
+    const highlight = await systemColor(page, 'Highlight');
+    // The Raised fill is gone, so the edge, a border, draws each card: highlight for the chosen one, 2px with its
+    // ::after, and the reader's text color for the rest.
+    expect((await paint(chosen)).edge).toBe(highlight);
+    expect((await paint(chosen, '::after')).edge).toBe(highlight);
+    expect((await paint(other)).edge).toBe(await systemColor(page, 'CanvasText'));
+    // The dot keeps its fill, highlight, with the check in highlighttext over it.
+    const dot = chosen.locator('.radio-indicator');
+    expect((await paint(dot)).fill).toBe(highlight);
+    const check = await paint(dot, '::after');
+    expect(check.fill).toBe(await systemColor(page, 'HighlightText'));
+    expect(check.fill).not.toBe(highlight);
+    expect((await paint(other.locator('.radio-indicator'))).fill).not.toBe(highlight);
+  });
+
   test('a folded accordion keeps its rules, its chevron and its marker', async ({ page }) => {
     await visit(page, '/docs/components/accordion');
     const form = page.locator('.stage form').filter({ has: page.locator('.accordion') });
@@ -2026,6 +2047,8 @@ const LONG_TARGETS: Record<string, string[]> = {
     '.stage .field-error',
     '.stage .checkbox-text',
   ],
+  // A card's title and sentence are the app's, and a word longer than its line breaks inside the card.
+  'choice-cards': ['.stage .field-label', '.stage .choice-card-title', '.stage .choice-card-description'],
   'collapsible-card': [
     '.stage .card-toggle-text',
     '.stage .card-note',
@@ -2396,6 +2419,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   calendar: ['.stage .calendar[data-face]'],
   card: ['.stage .card', '.stage .card-title', '.stage .card-note', '.stage .card-actions'],
   checkbox: ['.stage .checkbox-box'],
+  // Every card, its native radio and its dot: a press before hydration checks a radio and draws the card chosen.
+  'choice-cards': ['.stage .choice-card', '.stage .choice-card input[type=radio]', '.stage .radio-indicator'],
   'collapsible-card': ['.stage .card-collapsible', '.stage .card-toggle', '.stage .card-chevron'],
   // The input and its button; the list renders nothing until it opens.
   'combo-box': ['.stage .combo-box-input', '.stage .combo-box-button'],
@@ -2515,6 +2540,38 @@ const SERVER_RENDERED: Record<string, string[]> = {
 test('every component and chart page is listed as server rendered', () => {
   // A page added to the rail must say what its examples draw, so it cannot skip this check.
   expect(Object.keys(SERVER_RENDERED).sort()).toEqual([...SLUGS].sort());
+});
+
+test.describe('the choice cards', () => {
+  test.describe('with scripts off', () => {
+    test.use({ javaScriptEnabled: false });
+
+    test('a press on a card chooses it and draws it chosen, and the card the server chose lets go', async ({
+      page,
+    }) => {
+      await page.goto('/docs/components/choice-cards');
+      const group = page.locator('.stage .choice-cards').first();
+      const card = (title: string): Locator =>
+        group
+          .locator('label.choice-card')
+          .filter({ has: page.locator('.choice-card-title', { hasText: title }) });
+      const edge = (title: string): Promise<{ color: string; more: string }> =>
+        card(title).evaluate((element) => ({
+          color: getComputedStyle(element).borderTopColor,
+          more: getComputedStyle(element, '::after').borderTopWidth,
+        }));
+      expect((await edge('Weekly digest')).more).toBe('1px');
+      await card('None').locator('.choice-card-description').click();
+      await expect(card('None').locator('input[type=radio]')).toBeChecked();
+      // The server wrote data-selected on Weekly digest; its own radio is unchecked now, so it is not drawn chosen.
+      await expect(card('Weekly digest')).toHaveAttribute('data-selected', 'true');
+      const chosen = await edge('None');
+      const left = await edge('Weekly digest');
+      expect(chosen.more).toBe('1px');
+      expect(left.more).toBe('0px');
+      expect(chosen.color).not.toBe(left.color);
+    });
+  });
 });
 
 test.describe('without JavaScript', () => {

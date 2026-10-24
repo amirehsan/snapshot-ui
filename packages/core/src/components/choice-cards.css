@@ -1,0 +1,351 @@
+/*
+ * ChoiceCards, derived in docs/design-system.md ("ChoiceCards"): a single choice drawn as cards, each a label
+ * around a native radio, on RadioGroup's field. A card is a control's surface: Raised, a 1px boundary edge and
+ * the surface corner, with RadioGroup's 16px padding and 12px between its media, its text and its dot. The
+ * chosen card's edge turns ink and 2px wide and its dot fills ink with a canvas check; the card's content does
+ * not change. Two cues that are not color: the edge's weight and the check's shape.
+ *
+ * Each state only sets the --choice-card-* and --radio-* properties; the card, its ::after and RadioGroup's
+ * radio-indicator read them. Markup without React Aria is read from the input the card holds, named, as in
+ * :has(input:checked), so before hydration a press checks a radio and the card draws chosen. That test sits in
+ * :where(), so it weighs no more than the data attribute beside it, RadioGroup's pattern.
+ */
+@layer components {
+  /* The field's own column is minmax(0, 1fr), which lets a holder that sizes the group from its content, a
+     squeezed flex row or an auto track, take it under its longest word. One column of 100% is the group's width
+     where that is known and its widest card's longest word where it is not (plan, spec correction 22). A card in a
+     Card inherits the card's anywhere, so the group sets break-word again: a word breaks only when it alone is
+     wider than its line. */
+  .choice-cards {
+    grid-template-columns: 100%;
+    overflow-wrap: break-word;
+  }
+
+  /* The cards are parts of one control, so the part step separates them. No size container: the grid wraps by
+     auto-fill (spec 9). */
+  .choice-cards-items {
+    display: grid;
+    grid-template-columns: 100%;
+    gap: var(--spacing-part);
+  }
+
+  /* As many columns of 12rem as there is room for, one column of 100% in a box narrower than that, and in a
+     holder sized by its content one column as wide as the widest card. */
+  .choice-cards[data-layout='grid'] .choice-cards-items {
+    grid-template-columns: repeat(auto-fill, minmax(min(var(--choice-cards-min, 12rem), 100%), 1fr));
+  }
+
+  /* React Aria's RadioField, the item of the list or the grid. Its card fills it, so cards in a grid row stretch
+     to one height. */
+  .choice-card-field {
+    display: grid;
+    grid-template-columns: 100%;
+  }
+
+  /* A card is a surface: its corner is --choice-card-radius, the surface step on the page and the holder's
+     formula in a Card, which the parts inside read too. The state's color is on the 1px border, and ::after,
+     inside the border and over the content, adds the rest of the edge's width: 1px chosen, 0.5px invalid.
+     A card is a flex row of its media, its text and its dot, 12px apart, so a card with no media has no gap
+     before its text. Not a grid: the text has no minimum of its own, so a word longer than its line breaks inside
+     the card, and a flex row still counts the text's longest word where a holder sizes the card from its content,
+     where a grid track counts nothing for an item with no minimum, which broke every word of a squeezed card
+     (plan, spec correction 40). The gap also starts a new line after anything 100% wide. */
+  .choice-card {
+    --radio-ring: var(--color-boundary);
+    --radio-dot: var(--color-raised);
+    --radio-glyph: transparent;
+
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    column-gap: 0.75rem;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 1rem;
+    border: 1px solid var(--choice-card-edge, var(--color-boundary));
+    border-radius: var(--choice-card-radius, var(--radius-surface));
+    background-color: var(--color-raised);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-weight: var(--text-body--font-weight);
+    overflow: clip;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .choice-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: var(--choice-card-edge-more, 0px) solid var(--choice-card-edge, var(--color-boundary));
+    border-radius: max(0px, calc(var(--choice-card-radius, var(--radius-surface)) - 1px));
+    pointer-events: none;
+  }
+
+  /* In the grid the media takes a line of its own on top, and the text and the dot share the next; the lines keep
+     their height when a taller neighbor stretches the card, so the dot stays at the first line of the text. */
+  .choice-cards[data-layout='grid'] .choice-card {
+    flex-wrap: wrap;
+    align-content: flex-start;
+  }
+
+  /* An icon or a picture: decoration, aria-hidden in the markup. */
+  .choice-card-media {
+    display: flex;
+    flex: none;
+  }
+
+  .choice-cards[data-layout='grid'] .choice-card-media {
+    flex-basis: 100%;
+    margin-block-end: 0.75rem;
+  }
+
+  /* A 24px icon in ink, level with the title's first line. */
+  .choice-card-media[data-media='icon'] {
+    margin-block: calc((1lh - 24px) / 2);
+    color: var(--color-ink);
+  }
+
+  .choice-cards[data-layout='grid'] .choice-card-media[data-media='icon'] {
+    margin-block: 0 0.75rem;
+  }
+
+  .choice-card-media[data-media='icon'] > svg {
+    flex: none;
+    inline-size: 24px;
+    block-size: 24px;
+  }
+
+  .choice-card-media img {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .choice-card-media > picture {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  /* A list thumbnail 17px from the card's top and start edges lies in its curve, so it takes the formula with the
+     micro step as a floor and the card's own corner as a ceiling. */
+  .choice-cards[data-layout='list'] .choice-card-media[data-media='picture'] {
+    flex: none;
+    inline-size: 4rem;
+    block-size: 4rem;
+    overflow: clip;
+    border-radius: min(
+      var(--choice-card-radius, var(--radius-surface)),
+      max(var(--radius-micro), calc(var(--choice-card-radius, var(--radius-surface)) - 1px - 1rem))
+    );
+  }
+
+  /* In the grid a picture is flush with the card's top and sides, square-cornered, and the card clips it to its
+     own curve, which is concentric by construction. */
+  .choice-cards[data-layout='grid'] .choice-card-media[data-media='picture'] {
+    flex-basis: calc(100% + 2rem);
+    margin: -1rem -1rem 0.75rem;
+    inline-size: calc(100% + 2rem);
+    aspect-ratio: var(--choice-card-picture-ratio, 16 / 9);
+  }
+
+  /* The title, then the detail at the title line's end, then the sentence on a line of its own. The title has no
+     minimum of its own, so a word longer than its line breaks inside the card, while a holder that sizes the card
+     from its content still counts its longest word. A title too long for its line with the detail takes the line
+     and the detail moves to the end of the next, so neither breaks a word to make room. */
+  .choice-card-text {
+    display: flex;
+    flex: 1 1 0;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 0.75rem;
+    min-inline-size: 0;
+  }
+
+  .choice-card-title {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    font-weight: 500;
+  }
+
+  .choice-card-detail {
+    flex: none;
+    margin-inline-start: auto;
+    font-size: var(--text-small);
+    line-height: var(--text-body--line-height);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+  }
+
+  .choice-card-description {
+    flex: 1 1 100%;
+    min-inline-size: 0;
+    margin-block-start: var(--spacing-part);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: 450;
+    color: var(--color-slate);
+  }
+
+  /* RadioGroup's 20px dot, at the inline end of the title's first line. */
+  .choice-card > .radio-indicator {
+    margin-block: calc((1lh - 20px) / 2);
+  }
+
+  /* The grid's dot shares the text's line, which a wrapping row does not count when a holder sizes the card from
+     its content, so the text keeps the dot's room at its end and the dot is drawn into it. */
+  .choice-cards[data-layout='grid'] .choice-card-text {
+    padding-inline-end: calc(20px + 0.75rem);
+  }
+
+  .choice-cards[data-layout='grid'] .choice-card > .radio-indicator {
+    margin-inline-start: calc(-20px - 0.75rem);
+  }
+
+  /* The 5% ink wash over Raised and the edge firming to ink at 70%, since the wash lowers the boundary. A chosen,
+     disabled or read-only card takes neither. */
+  @media (hover: hover) {
+    .choice-card:is(:hover, [data-hovered]):not(
+        [data-selected],
+        :where(:has(input:checked)),
+        [data-disabled],
+        :where(:has(input:disabled)),
+        [data-readonly]
+      ) {
+      --choice-card-edge: color-mix(in srgb, var(--color-ink) 70%, transparent);
+
+      background-color: color-mix(in srgb, var(--color-ink) 5%, var(--color-raised));
+    }
+  }
+
+  /* Pressed shows the same wash as hover, since touch has no hover to show it. */
+  .choice-card:is(:active, [data-pressed]):not(
+      [data-selected],
+      :where(:has(input:checked)),
+      [data-disabled],
+      :where(:has(input:disabled)),
+      [data-readonly]
+    ) {
+    --choice-card-edge: color-mix(in srgb, var(--color-ink) 70%, transparent);
+
+    background-color: color-mix(in srgb, var(--color-ink) 5%, var(--color-raised));
+  }
+
+  /* Chosen. The server writes data-selected on the card it draws chosen, and before hydration nothing takes it
+     off when a press checks another radio, so a card whose own radio is not checked is never drawn chosen, by a
+     test in :where() that weighs nothing (plan, spec correction 41). */
+  .choice-card:is([data-selected], :where(:has(input:checked))):where(:not(:has(input:not(:checked)))) {
+    --choice-card-edge: var(--color-ink);
+    --choice-card-edge-more: 1px;
+    --radio-ring: var(--color-ink);
+    --radio-dot: var(--color-ink);
+    --radio-glyph: var(--color-canvas);
+  }
+
+  /* The standard ring outside the card, following its corner. The card is never ink-filled, so it never inverts. */
+  .choice-card:is([data-focus-visible], :where(:has(input:focus-visible))) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /* A read-only choice cannot change, so it takes no wash and no pointer. */
+  .choice-card[data-readonly] {
+    cursor: default;
+  }
+
+  /* The disabled fill, a faint edge and taupe words, as a disabled radio row; a picture at half strength. */
+  .choice-card:is([data-disabled], :where(:has(input:disabled))) {
+    --choice-card-edge: color-mix(in srgb, var(--color-ink) 15%, transparent);
+    --radio-ring: color-mix(in srgb, var(--color-ink) 15%, transparent);
+
+    background-color: var(--color-disabled);
+    color: var(--color-taupe);
+    cursor: not-allowed;
+  }
+
+  .choice-card:is([data-disabled], :where(:has(input:disabled)))
+    :is(.choice-card-description, .choice-card-media) {
+    color: var(--color-taupe);
+  }
+
+  .choice-card:is([data-disabled], :where(:has(input:disabled))) .choice-card-media img {
+    opacity: 0.5;
+  }
+
+  /* The choice of a disabled group is still information, so a chosen card keeps its check, at the boundary
+     strength on the disabled fill, RadioGroup's rule. */
+  .choice-card:is([data-disabled], :where(:has(input:disabled))):is(
+      [data-selected],
+      :where(:has(input:checked))
+    ):where(:not(:has(input:not(:checked)))) {
+    --radio-ring: var(--color-boundary);
+    --radio-dot: var(--color-disabled);
+    --radio-glyph: var(--color-boundary);
+  }
+
+  /* The group's root carries data-invalid. This rule comes after every state above and is at least as heavy, so
+     the error edge, 1.5px, holds through hover, chosen and disabled. */
+  .choice-cards[data-invalid] .choice-card {
+    --choice-card-edge: var(--color-error);
+    --choice-card-edge-more: 0.5px;
+  }
+
+  /* Ruling 19: every card of a group in a Card takes the formula, wherever it falls, StatTile's selectors. */
+  :is(.card > .choice-cards, .card-body .choice-cards) .choice-card {
+    --choice-card-radius: max(
+      var(--radius-micro),
+      calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad))
+    );
+  }
+
+  /* Forced colors repaint every fill, so the edge, a border, carries the card in canvastext, and the chosen edge
+     and the dot take highlight with the check in highlighttext. The dot opts out of the repaint to keep its fill,
+     as SegmentedControl's chosen option does, so every state names its colors here, each rule as heavy as the
+     one it follows. A disabled card is drawn in graytext. */
+  @media (forced-colors: active) {
+    .choice-card {
+      --choice-card-edge: canvastext;
+      --radio-ring: canvastext;
+      --radio-dot: canvas;
+      --radio-glyph: transparent;
+    }
+
+    .choice-card > .radio-indicator {
+      forced-color-adjust: none;
+    }
+
+    .choice-card:is([data-selected], :where(:has(input:checked))):where(:not(:has(input:not(:checked)))) {
+      --choice-card-edge: highlight;
+      --radio-ring: highlight;
+      --radio-dot: highlight;
+      --radio-glyph: highlighttext;
+    }
+
+    .choice-card:is([data-disabled], :where(:has(input:disabled))) {
+      --choice-card-edge: graytext;
+      --radio-ring: graytext;
+
+      color: graytext;
+    }
+
+    .choice-card:is([data-disabled], :where(:has(input:disabled)))
+      :is(.choice-card-description, .choice-card-media) {
+      color: graytext;
+    }
+
+    .choice-card:is([data-disabled], :where(:has(input:disabled))):is(
+        [data-selected],
+        :where(:has(input:checked))
+      ):where(:not(:has(input:not(:checked)))) {
+      --radio-ring: graytext;
+      --radio-dot: canvas;
+      --radio-glyph: graytext;
+    }
+  }
+}

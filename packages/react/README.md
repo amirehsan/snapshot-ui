@@ -47,6 +47,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Calendar](https://snapshotui.com/docs/components/calendar)
 - [Card](https://snapshotui.com/docs/components/card)
 - [Checkbox](https://snapshotui.com/docs/components/checkbox)
+- [Choice cards](https://snapshotui.com/docs/components/choice-cards)
 - [Collapsible card](https://snapshotui.com/docs/components/collapsible-card)
 - [Combo box](https://snapshotui.com/docs/components/combo-box)
 - [Command palette](https://snapshotui.com/docs/components/command-palette)

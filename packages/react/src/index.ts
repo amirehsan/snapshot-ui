@@ -321,3 +321,11 @@ export {
   type TagInputPreset,
   type TagInputProps,
 } from './tag-input';
+export {
+  ChoiceCard,
+  ChoiceCards,
+  type ChoiceCardBaseProps,
+  type ChoiceCardProps,
+  type ChoiceCardsBaseProps,
+  type ChoiceCardsProps,
+} from './choice-cards';

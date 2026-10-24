@@ -814,6 +814,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/calendar">Calendar</Link>
                 <Link href="/docs/components/card">Card</Link>
                 <Link href="/docs/components/checkbox">Checkbox</Link>
+                <Link href="/docs/components/choice-cards">Choice cards</Link>
                 <Link href="/docs/components/collapsible-card">Collapsible card</Link>
                 <Link href="/docs/components/combo-box">Combo box</Link>
                 <Link href="/docs/components/command-palette">Command palette</Link>

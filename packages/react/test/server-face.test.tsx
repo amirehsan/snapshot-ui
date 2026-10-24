@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { Monitor, Moon, Sun } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { I18nProvider } from 'react-aria-components';
@@ -37,6 +38,7 @@ import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Accordion, AccordionItem } from '../src/accordion';
 import { TagInput, emailPreset } from '../src/tag-input';
+import { ChoiceCard, ChoiceCards } from '../src/choice-cards';
 import { Gauge } from '../src/gauge';
 import { MonthGrid } from '../src/month-grid';
 import {
@@ -167,6 +169,40 @@ function ServerInvite({
       maxValues={10}
       defaultValue={values}
     />
+  );
+}
+
+/** A plan choice as a billing page draws it on the server: three cards, the second chosen, each with a price. */
+function ServerPlans(): ReactElement {
+  return (
+    <ChoiceCards label="Plan" name="plan" defaultValue="yearly">
+      <ChoiceCard value="monthly" description="Billed every month." detail="$12 a month">
+        Monthly
+      </ChoiceCard>
+      <ChoiceCard value="yearly" description="Two months free." detail="$120 a year">
+        Yearly
+      </ChoiceCard>
+      <ChoiceCard value="starter" description="One account, no exports." detail="Free">
+        Starter
+      </ChoiceCard>
+    </ChoiceCards>
+  );
+}
+
+/** A theme choice drawn as a grid of icon cards on the server, the second chosen. */
+function ServerThemes(): ReactElement {
+  return (
+    <ChoiceCards label="Theme" name="theme" defaultValue="dark" layout="grid">
+      <ChoiceCard value="light" icon={<Sun />}>
+        Light
+      </ChoiceCard>
+      <ChoiceCard value="dark" icon={<Moon />}>
+        Dark
+      </ChoiceCard>
+      <ChoiceCard value="system" icon={<Monitor />}>
+        System
+      </ChoiceCard>
+    </ChoiceCards>
   );
 }
 
@@ -543,6 +579,10 @@ const FACES: [name: string, element: ReactElement][] = [
   // Nothing reads the locale: the tags, the hidden inputs, the count and the empty status host.
   ['TagInput', <ServerInvite />],
   ['TagInput empty', <ServerInvite values={[]} />],
+  // Nothing reads the locale or the direction: the cards, their native radios, the chosen one's checked, the
+  // ids that name and describe each radio, and a grid's icons.
+  ['ChoiceCards', <ServerPlans />],
+  ['ChoiceCards grid of icons', <ServerThemes />],
 ];
 
 describe('the server face', () => {

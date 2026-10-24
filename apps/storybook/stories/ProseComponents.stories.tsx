@@ -14,6 +14,8 @@ import {
   CardHeader,
   CardNote,
   CardTitle,
+  ChoiceCard,
+  ChoiceCards,
   DataTable,
   emailPreset,
   Eyebrow,
@@ -127,6 +129,19 @@ const PARTS: [name: string, render: (twin: string) => ReactElement][] = [
         preset={emailPreset}
         defaultValue={['ana@example.com', 'bo@example.com']}
       />
+    ),
+  ],
+  [
+    'ChoiceCards',
+    () => (
+      <ChoiceCards label="Plan" defaultValue="yearly">
+        <ChoiceCard value="monthly" description="Billed every month." detail="$12 a month">
+          Monthly
+        </ChoiceCard>
+        <ChoiceCard value="yearly" description="Two months free." detail="$120 a year">
+          Yearly
+        </ChoiceCard>
+      </ChoiceCards>
     ),
   ],
   [

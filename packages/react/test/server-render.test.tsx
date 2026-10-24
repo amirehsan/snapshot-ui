@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { Monitor, Moon, Sun } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { I18nProvider } from 'react-aria-components';
@@ -18,6 +19,7 @@ import { DateRangePicker } from '../src/date-range-picker';
 import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
 import { Accordion, AccordionItem } from '../src/accordion';
 import { TagInput, emailPreset } from '../src/tag-input';
+import { ChoiceCard, ChoiceCards } from '../src/choice-cards';
 import { CollapsibleCard } from '../src/collapsible-card';
 import { ComboBox } from '../src/combo-box';
 import { CommandPalette } from '../src/command-palette';
@@ -142,6 +144,40 @@ function ServerInvite({
       maxValues={10}
       defaultValue={values}
     />
+  );
+}
+
+/** A plan choice as a billing page draws it on the server: three cards, the second chosen, each with a price. */
+function ServerPlans({ layout }: { layout?: 'list' | 'grid' }): ReactElement {
+  return (
+    <ChoiceCards label="Plan" name="plan" defaultValue="yearly" layout={layout}>
+      <ChoiceCard value="monthly" description="Billed every month." detail="$12 a month">
+        Monthly
+      </ChoiceCard>
+      <ChoiceCard value="yearly" description="Two months free." detail="$120 a year">
+        Yearly
+      </ChoiceCard>
+      <ChoiceCard value="starter" description="One account, no exports." detail="Free">
+        Starter
+      </ChoiceCard>
+    </ChoiceCards>
+  );
+}
+
+/** A theme choice drawn as a grid of icon cards on the server, the second chosen. */
+function ServerThemes(): ReactElement {
+  return (
+    <ChoiceCards label="Theme" name="theme" defaultValue="dark" layout="grid">
+      <ChoiceCard value="light" icon={<Sun />}>
+        Light
+      </ChoiceCard>
+      <ChoiceCard value="dark" icon={<Moon />}>
+        Dark
+      </ChoiceCard>
+      <ChoiceCard value="system" icon={<Monitor />}>
+        System
+      </ChoiceCard>
+    </ChoiceCards>
   );
 }
 
@@ -487,6 +523,37 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     <ServerInvite values={[]} />,
     ['<input type="hidden" name="invite" value=""/>', 'class="tag-input-input"'],
     ['tag-input-tag', 'role="grid"'],
+  ],
+  [
+    // Three native radios, the second checked, each named by its title and described by its sentence then its
+    // detail: a press before hydration checks a radio, and the card draws chosen from it.
+    'ChoiceCards',
+    <ServerPlans />,
+    [
+      'data-layout="list" class="field radio-group choice-cards"',
+      'aria-orientation="vertical"',
+      'class="choice-cards-items"',
+      '<label data-react-aria-pressable="true" class="choice-card"',
+      'type="radio" name="plan" value="monthly"/>',
+      'type="radio" name="plan" checked="" value="yearly"/>',
+      'type="radio" name="plan" value="starter"/>',
+      'class="choice-card-title">Yearly</span>',
+      'class="choice-card-detail">$120 a year</span>',
+      'class="choice-card-description">Two months free.</span>',
+      '<span class="radio-indicator" aria-hidden="true"></span>',
+    ],
+    ['choice-card-media', 'data-invalid', 'data-changed'],
+  ],
+  [
+    'ChoiceCards, a grid of icons',
+    <ServerThemes />,
+    [
+      'data-layout="grid" class="field radio-group choice-cards"',
+      'aria-orientation="horizontal"',
+      '<span class="choice-card-media" data-media="icon" aria-hidden="true"><svg',
+      'type="radio" name="theme" checked="" value="dark"/>',
+    ],
+    ['choice-card-detail', 'choice-card-description'],
   ],
   [
     'CollapsibleCard',
@@ -1504,6 +1571,21 @@ describe('the client components on the server', () => {
     for (const part of excludes) expect(html).not.toContain(part);
   });
 
+  // Each radio is named by its title alone and described by its sentence, then its detail, by ids the server
+  // writes on the spans that hold them (spec 7.3, risk R5).
+  it('names each choice card by its title and describes it by its sentence then its detail, on the server', () => {
+    const html = renderToString(<ServerPlans />);
+    const inputs = [...html.matchAll(/<input ([^>]*)type="radio"[^>]*>/g)].map((match) => match[1] ?? '');
+    expect(inputs).toHaveLength(3);
+    for (const [at, title] of ['Monthly', 'Yearly', 'Starter'].entries()) {
+      const labelledBy = /aria-labelledby="([^"]+)"/.exec(inputs[at] ?? '')?.[1] ?? '';
+      const describedBy = /aria-describedby="([^"]+)"/.exec(inputs[at] ?? '')?.[1]?.split(' ') ?? [];
+      expect(html).toContain(`id="${labelledBy}" class="choice-card-title">${title}</span>`);
+      expect(html).toMatch(new RegExp(`id="${describedBy[0] ?? ''}" class="choice-card-description"`));
+      expect(html).toMatch(new RegExp(`id="${describedBy[1] ?? ''}" class="choice-card-detail"`));
+    }
+  });
+
   // React Aria merges an id given to a disclosure panel with its own only where there is a DOM, so a server would
   // write its own id, and the toggles and Show all would name panels that are not there.
   it("writes the accordion's panel ids on the server, where its toggles and Show all name them", () => {
@@ -1531,6 +1613,14 @@ describe('the client components on the server', () => {
       classes.filter((name) => roots.has(name)),
       classes.join(' '),
     ).not.toEqual([]);
+  });
+
+  // The group's root carries field's root as well, so the check above would pass on that alone; the choice
+  // cards' own roots are listed too, the group's and the card's, which extends no class of its file (lesson 22).
+  it("lists the choice cards' own roots, the group's and the card's", () => {
+    expect(roots.has('choice-cards')).toBe(true);
+    expect(roots.has('choice-card')).toBe(true);
+    expect(outermostClasses(renderToString(<ServerPlans />))).toContain('choice-cards');
   });
 
   // React Aria makes a collator while a Select renders, for its closed type-to-select, and while a ComboBox

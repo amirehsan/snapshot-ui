@@ -3,6 +3,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { Accordion, AccordionItem } from '../src/accordion';
 import { TagInput } from '../src/tag-input';
+import { ChoiceCard, ChoiceCards } from '../src/choice-cards';
 import { AppShell } from '../src/app-shell';
 import { Button } from '../src/button';
 import { RangeCalendar } from '../src/calendar';
@@ -616,6 +617,31 @@ describe('an empty choices part slot', () => {
       expect(container.querySelector('input')?.getAttribute('aria-describedby')).toBe(
         container.querySelector('.tag-input-tags')?.id,
       );
+      unmount();
+    }
+  });
+
+  it('draws no media, detail or sentence span for an empty node', () => {
+    for (const empty of [undefined, false, null, '']) {
+      const { container, unmount } = render(
+        <ChoiceCards label="Plan">
+          <ChoiceCard value="monthly" icon={empty} picture={empty} detail={empty} description={empty}>
+            Monthly
+          </ChoiceCard>
+        </ChoiceCards>,
+      );
+      const card = container.querySelector('label.choice-card');
+      expect(card?.querySelector('.choice-card-media')).toBeNull();
+      expect(card?.querySelector('.choice-card-detail')).toBeNull();
+      expect(card?.querySelector('.choice-card-description')).toBeNull();
+      expect(
+        [...(card?.querySelector('.choice-card-text')?.children ?? [])].map((child) => child.className),
+      ).toEqual(['choice-card-title']);
+      // Named by the title, and described by nothing of its own: only the ids of what is drawn are named.
+      const radio = screen.getByRole('radio', { name: 'Monthly' });
+      for (const id of radio.getAttribute('aria-describedby')?.split(' ') ?? []) {
+        expect(card?.querySelector(`[id="${id}"]`), id).toBeNull();
+      }
       unmount();
     }
   });

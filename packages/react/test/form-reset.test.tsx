@@ -4,6 +4,7 @@ import { useState, type ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { formOf } from './dom';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
+import { ChoiceCard, ChoiceCards } from '../src/choice-cards';
 import { ConditionalFields } from '../src/conditional-fields';
 import { DateRangePicker } from '../src/date-range-picker';
 import { MultiSelect } from '../src/multi-select';
@@ -136,6 +137,31 @@ function RadioGroupForm(): ReactElement {
         <Radio value="monthly">Monthly</Radio>
         <Radio value="never">Never</Radio>
       </RadioGroup>
+      <ResetButton />
+    </form>
+  );
+}
+
+function ChoiceCardsForm(): ReactElement {
+  const [changed, setChanged] = useState(false);
+  return (
+    <form>
+      <ChoiceCards
+        label="Plan"
+        name="plan"
+        defaultValue="monthly"
+        isChanged={changed}
+        onChange={(value) => {
+          setChanged(value !== 'monthly');
+        }}
+      >
+        <ChoiceCard value="monthly" description="Billed every month." detail="$12 a month">
+          Monthly
+        </ChoiceCard>
+        <ChoiceCard value="yearly" description="Two months free." detail="$120 a year">
+          Yearly
+        </ChoiceCard>
+      </ChoiceCards>
       <ResetButton />
     </form>
   );
@@ -356,6 +382,30 @@ describe('a native form reset', () => {
     expect(screen.getByRole('radio', { name: 'Monthly' })).toBeChecked();
     expect(screen.getByRole('radio', { name: 'Never' })).not.toBeChecked();
     expect(sent(container, 'frequency')).toEqual(['monthly']);
+    expect(showsChip(container)).toBe(false);
+  });
+
+  it('puts ChoiceCards back on its default card, without its chip', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<ChoiceCardsForm />);
+    const chosen = (): string[] =>
+      [...container.querySelectorAll('label.choice-card[data-selected]')].map(
+        (card) => card.querySelector('.choice-card-title')?.textContent ?? '',
+      );
+    expect(screen.getByRole('radio', { name: 'Monthly' })).toBeChecked();
+    expect(showsChip(container)).toBe(false);
+
+    // A press on the card's sentence chooses it, as a press anywhere on the card does.
+    await user.click(screen.getByText('Two months free.'));
+    expect(sent(container, 'plan')).toEqual(['yearly']);
+    expect(chosen()).toEqual(['Yearly']);
+    expect(showsChip(container)).toBe(true);
+
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(screen.getByRole('radio', { name: 'Monthly' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Yearly' })).not.toBeChecked();
+    expect(chosen()).toEqual(['Monthly']);
+    expect(sent(container, 'plan')).toEqual(['monthly']);
     expect(showsChip(container)).toBe(false);
   });
 
