@@ -13616,7 +13616,14 @@ centres one line of the title in it and grows the row when the title wraps.
 The title is at the body step and weight 500 in ink, the toggle's words; a
 long word breaks with `overflow-wrap: break-word`, set on the accordion and
 inherited, never `anywhere`, which would break a word in a holder that sizes
-the accordion by its content (settings plan, spec corrections 46 and 71).
+the accordion by its content (settings plan, spec corrections 46 and 71). The
+accordion keeps its automatic minimum, and its panel's columns are `100%`,
+the panel's width where that is known and its longest word where a holder
+sizes the accordion from its content, so a squeezed flex row or an `auto`
+track stops at the longest word of a title, a note or a panel, never a
+letter; a holder that wants a long word broken inside it gives the accordion
+`min-width: 0`, as the docs examples do (plan, spec correction 22).
+`WordsKeptWhole` proves both in three engines.
 `RowHeights` measures 48px and 40px within a pixel, the first line centred
 and the chevron level with it, in three engines.
 

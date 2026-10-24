@@ -94,6 +94,8 @@ export function Settings() {
 
 An accordion is a client component that a server component can render; the server's HTML holds every title, the open sections and their state. If you import the stylesheets one by one from `dist/components`, import `card.css` with `accordion.css`: the folded chevron's turn, which follows the page's direction, is set there.
 
+An accordion keeps its words whole. A word breaks only when it alone is wider than its line, and in a flex row or a grid track that sizes the accordion from its content, the accordion is never narrower than its longest word. Where a long address should break inside such a holder instead, give the accordion, or the wrapper that holds it, `min-width: 0`, as the examples on this page do.
+
 </Section>
 
 <Section>

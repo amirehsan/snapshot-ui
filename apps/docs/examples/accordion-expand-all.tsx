@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 
 export default function AccordionExpandAll(): ReactElement {
   return (
-    <Accordion hasExpandAll style={{ width: '100%', maxWidth: '36rem' }}>
+    <Accordion hasExpandAll style={{ width: '100%', minWidth: 0, maxWidth: '36rem' }}>
       <AccordionItem id="income" title="Income" note="Salary, transfers in and refunds">
         <p>Money that comes into an account, counted on the day it arrives.</p>
       </AccordionItem>

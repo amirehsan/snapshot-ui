@@ -7,11 +7,11 @@
  */
 @layer components {
   /* No fill, edge or corner: an accordion ends flush at a card's padding, and an app frames one on the page with
-     a Card. Its zero minimum and break-word let a long word in a title, a note or a panel break inside the column
-     rather than widen it, as a card's anywhere does for what it holds, with words kept whole where they fit. */
+     a Card. break-word lets a word longer than its line break inside the column, and keeps every other word
+     whole. It keeps its automatic minimum, its longest word, so a holder that sizes it from its content, a
+     squeezed flex row or an auto track, never takes it under a word (settings spec corrections 46 and 71). */
   .accordion {
     display: block;
-    min-inline-size: 0;
     font-family: var(--font-sans);
     color: var(--color-ink);
     overflow-wrap: break-word;
@@ -144,9 +144,11 @@
   }
 
   /* The fold, CollapsibleCard's: a grid row between 1fr and 0fr, drawn only while the panel is shown, so a
-     browser without until-found falls back to the display: none of hidden. */
+     browser without until-found falls back to the display: none of hidden. Its one column is 100%: the panel's
+     own width where that is known, so a long word breaks inside it, and its longest word where a holder sizes the
+     accordion from its content. */
   .accordion-fold {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 100%;
     grid-template-rows: 1fr;
     transition: grid-template-rows 200ms ease;
   }
@@ -159,14 +161,13 @@
     grid-template-rows: 0fr;
   }
 
-  /* The Card body's rhythm, so fields in a panel take the same steps as fields in a card. */
-  /* One column the panel's width, so a long word in a paragraph breaks there rather than sizing the column. */
+  /* The Card body's rhythm, so fields in a panel take the same steps as fields in a card, in one 100% column, as
+     the fold's. */
   .accordion-body {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 100%;
     gap: var(--spacing-peer);
     min-block-size: 0;
-    min-inline-size: 0;
     padding-block-end: var(--spacing-peer);
     transition: padding-block-end 200ms ease;
   }

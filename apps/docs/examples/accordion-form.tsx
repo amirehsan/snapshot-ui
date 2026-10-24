@@ -12,7 +12,7 @@ export default function AccordionForm(): ReactElement {
   return (
     <form
       className="stack"
-      style={{ width: '100%', maxWidth: '36rem' }}
+      style={{ width: '100%', minWidth: 0, maxWidth: '36rem', gridTemplateColumns: 'minmax(0, 1fr)' }}
       onSubmit={(event) => {
         event.preventDefault();
         setSent([...new FormData(event.currentTarget).keys()].join(', '));

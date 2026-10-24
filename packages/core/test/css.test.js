@@ -11129,6 +11129,14 @@ describe('src/components/accordion.css', () => {
     // Never anywhere, which would break a word in a holder sized by its content (settings corrections 46, 71).
     expect(rules()).not.toContain('anywhere');
     expect(block(rules(), '.accordion-heading {')).toContain('margin: 0;');
+    // Nor a zero minimum on the accordion, which let a squeezing holder take it under its longest word; the
+    // panel's columns are 100%, its own width where that is known and its longest word where a holder sizes it
+    // from its content (plan, spec correction 22).
+    expect(block(rules(), '.accordion {')).not.toContain('min-inline-size');
+    expect(block(rules(), '.accordion-fold {')).toContain('grid-template-columns: 100%;');
+    expect(block(rules(), '.accordion-body {')).toContain('grid-template-columns: 100%;');
+    expect(block(rules(), '.accordion-body {')).not.toContain('min-inline-size');
+    expect(rules()).not.toContain('minmax(0');
   });
 
   it('sets the note at the small step in slate, a part step under the title', () => {

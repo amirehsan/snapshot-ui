@@ -9,7 +9,10 @@ export default function AccordionSingle(): ReactElement {
   const [open, setOpen] = useState<Set<string | number>>(new Set(['weekly']));
   const [first] = [...open];
   return (
-    <div className="stack" style={{ width: '100%', maxWidth: '36rem' }}>
+    <div
+      className="stack"
+      style={{ width: '100%', minWidth: 0, maxWidth: '36rem', gridTemplateColumns: 'minmax(0, 1fr)' }}
+    >
       <Accordion allowsMultipleExpanded={false} expandedKeys={open} onExpandedChange={setOpen}>
         <AccordionItem id="daily" title="Daily">
           <p>A summary every morning at 8, of yesterday&apos;s spending.</p>

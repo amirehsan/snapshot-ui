@@ -590,3 +590,86 @@ export const RowHeights: Story = {
     });
   },
 };
+
+/** The words of `scope`'s text that a line break cuts in two: each should lie on one line. */
+function brokenWords(scope: Element): string[] {
+  const broken: string[] = [];
+  const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    for (const match of (node.textContent ?? '').matchAll(/\S+/g)) {
+      const range = document.createRange();
+      range.setStart(node, match.index);
+      range.setEnd(node, match.index + match[0].length);
+      const lines = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)));
+      if (lines.size > 1) broken.push(match[0]);
+    }
+  }
+  return broken;
+}
+
+/**
+ * Two sections with a note, one open, as a lone accordion a holder sizes from its content. The open panel holds a
+ * word longer than any title's, so the panel's words count as well as the titles'.
+ */
+function Lone(): ReactElement {
+  return (
+    <Accordion defaultExpandedKeys={['notifications']}>
+      <AccordionItem id="notifications" title="Notifications" note="Email and digest">
+        <p>Receipts go to accountholders@example.com.</p>
+      </AccordionItem>
+      <AccordionItem id="danger" title="Danger zone">
+        <p>Close the account.</p>
+      </AccordionItem>
+    </Accordion>
+  );
+}
+
+/**
+ * Words stay whole where a holder sizes a lone accordion from its content: a flex row squeezed by its neighbor and
+ * an `auto` grid track stop at the longest word, never a letter (settings corrections 46 and 71). A word longer
+ * than the line still breaks inside a 300px holder, so nothing passes it.
+ */
+export const WordsKeptWhole: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    // One column exactly 300px wide, so each case gets the holder's width and no more.
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1fr)',
+        gap: 'var(--spacing-separate)',
+        width: '300px',
+      }}
+    >
+      <div data-case="flex" style={{ display: 'flex' }}>
+        <Lone />
+        <div style={{ flex: '1 0 240px' }}>The page</div>
+      </div>
+      <div data-case="grid" style={{ display: 'grid', gridTemplateColumns: 'auto minmax(240px, 1fr)' }}>
+        <Lone />
+        <div>The page</div>
+      </div>
+      <div data-case="long">
+        <Accordion defaultExpandedKeys={['word']}>
+          <AccordionItem id="word" title={UNBROKEN} note={UNBROKEN}>
+            <p>{UNBROKEN}</p>
+          </AccordionItem>
+        </Accordion>
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const at = (name: string): HTMLElement => part(canvasElement, `[data-case="${name}"]`);
+    await waitFor(() => expect(brokenWords(at('flex'))).toEqual([]), { timeout: 5000 });
+    await expect(brokenWords(at('grid'))).toEqual([]);
+    // A word longer than the line breaks inside the holder, and nothing passes it.
+    const long = at('long');
+    const room = long.getBoundingClientRect();
+    for (const each of long.querySelectorAll<HTMLElement>(
+      '.accordion, .accordion-toggle, .accordion-note, .accordion-body',
+    )) {
+      await expect(each.getBoundingClientRect().right).toBeLessThanOrEqual(room.right + 1);
+      await expect(each.scrollWidth).toBeLessThanOrEqual(each.clientWidth + 1);
+    }
+  },
+};
