@@ -1,5 +1,20 @@
 # @snapshot-ui/charts
 
+## 0.2.1
+
+### Patch Changes
+
+- a9c291c: Require @snapshot-ui/core 0.10, which this release of the charts is tested with.
+- Updated dependencies [a9c291c]
+- Updated dependencies [a9c291c]
+- Updated dependencies [a9c291c]
+- Updated dependencies [a9c291c]
+- Updated dependencies [a9c291c]
+- Updated dependencies [a9c291c]
+- Updated dependencies [a9c291c]
+- Updated dependencies [a9c291c]
+  - @snapshot-ui/core@0.10.0
+
 ## 0.2.0
 
 ### Minor Changes
