@@ -48,7 +48,7 @@ describe('emailPreset', () => {
   it.each([
     ['ana@bücher.de', 'ana@bücher.de', true],
     ['ana@BÜCHER.de', 'ana@bücher.de', true],
-    ['ana@bücher.de', 'ana@bücher.de', true],
+    ['ana@bu\u0308cher.de', 'ana@bücher.de', true],
     ['ana@हिन्दी.भारत', 'ana@हिन्दी.भारत', true],
     ['ana@مثال.ایران', 'ana@مثال.ایران', true],
     ['anä@example.com', 'anä@example.com', false],
@@ -130,13 +130,13 @@ describe('domainPreset', () => {
     ['हिन्दी.भारत', true],
     ['ไทย.ไทย', true],
     ['เว็บ.ไทย', true],
-    ['́ex.com', false],
+    ['\u0301ex.com', false],
   ])('accepts a label in any script, marks included: %s %s', (text, valid) => {
     expect(accepts(domainPreset, text)).toBe(valid);
   });
 
   it('composes a decomposed name, so it passes and is the same as the composed one', () => {
-    const decomposed = 'bücher.de';
+    const decomposed = 'bu\u0308cher.de';
     expect(clean(domainPreset, decomposed)).toEqual(['bücher.de']);
     expect(accepts(domainPreset, decomposed)).toBe(true);
   });
