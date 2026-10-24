@@ -13774,7 +13774,7 @@ it wraps to a row of its own once less than 8rem is left beside the last tag,
 and a reader never types into a sliver. Without a label a changed field draws
 the clay dot at the text's end, 24px in, field.css's default place, and the
 box stops a dot and a part step sooner, as a text input does (spec correction
-23). A preset whose box is `dir="ltr"` marks the field `data-ltr`, and each
+28). A preset whose box is `dir="ltr"` marks the field `data-ltr`, and each
 tag's text is `direction: ltr; unicode-bidi: isolate`, so an address keeps
 its order on a Persian page while the tags run from the right. The count
 against `maxValues` sits at the label row's end. The polite status host is
@@ -13810,8 +13810,9 @@ with the error line.
 **Delimiters are read from the text**, after each change, never from
 `keydown`, since Android keyboards report most keys as `Unidentified`
 (`AndroidInput`). While an input method composes nothing is split, and Enter
-with `isComposing` or `keyCode` 229 is the input method's, so a Persian or
-Chinese word is never cut in half (`Composition`). Enter in an empty box is
+and Escape with `isComposing` or `keyCode` 229 are the input method's, so a
+Persian or Chinese word is never cut in half or thrown away (`Composition`;
+spec correction 42). Enter in an empty box is
 left to the browser, which submits the form. A pasted list is committed
 whole: a text box strips a pasted line break, so the field reads the
 clipboard's text, keeps its breaks, and splits it as it was copied; a paste
@@ -13825,8 +13826,13 @@ required after the `@`: the browser's own rule, so the field agrees with
 every email input on the web, and the dot because an address with no dot in
 its domain is a typo far more often than a real address (spec 11 item 10).
 It refuses an internationalized local part, as the standard does; the docs
-show the spread that extends it (risk R7). Domains take labels in any
-script, a last label not all digits, 253 characters at most and a leading
+show the spread that extends it (risk R7). Its domain takes the domain
+preset's labels, in any script, as an email box does (spec correction 41).
+A paste is split outside quotes and angle brackets, and a piece holding a
+bracketed address gives every address in it and drops the name (spec
+correction 39). Domains take labels in any
+script, marks included after a label's first letter, composed before they
+are lowercased, a last label not all digits, 253 characters at most and a leading
 `*.`; a pasted URL gives its host. Paths start with a slash, collapse runs of
 slashes and keep their case; a pasted URL gives its path. Each sets the box's
 keyboard, turns capitals, corrections and spelling off, and sets the box
@@ -13840,7 +13846,9 @@ back. It differs on purpose from MultiSelect's Backspace, which focuses the
 last tag and removes it only on a second press: there a removed value is
 gone, here it is in the box in plain sight, and Enter, a delimiter or leaving
 the field adds it again. A held Backspace takes back one tag and then deletes
-its letters (`HeldBackspace`).
+its letters (`HeldBackspace`). A held Backspace or Delete on a tag removes
+that one tag, though React Aria's tag takes a key's repeats and focus moves
+to the next tag (spec correction 40; `HeldDeleteOnTag`).
 
 **Focus never falls to the body** (lessons 10 and 16). When a tag leaves,
 taken back or removed, focus moves in the key's or the press's handler, while
@@ -13889,11 +13897,11 @@ and 32px compact on a coarse pointer.
 `canvastext`, a disabled tag `graytext`; and a disabled field's placeholder
 `graytext`.
 
-**The size.** `{ TagInput }` measures 4.15 kB without React Aria, Lucide and
-`@internationalized/date`, 0.15 kB over the spec's 4 kB budget; the rule
-gives a 5 kB limit. With React Aria not ignored it measures 42.06 kB. The
-presets measure 746 B either way, since their module imports nothing; the
-rule gives 1.5 kB (spec correction 36).
+**The size.** `{ TagInput }` measures 4.18 kB without React Aria, Lucide and
+`@internationalized/date`, 0.18 kB over the spec's 4 kB budget; the rule
+gives a 5 kB limit. With React Aria not ignored it measures 42.07 kB. The
+presets measure 895 B either way, since their module imports nothing; the
+rule gives 1.5 kB (spec corrections 36 and 43).
 
 **Screen readers and devices.** Not yet verified with VoiceOver and NVDA
 (owner action 3): the label and hint on the box, the tags described after
