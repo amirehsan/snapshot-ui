@@ -43,7 +43,7 @@ A preset says how text becomes values: how a paste is split, how each value is c
 
 ### Emails
 
-`emailPreset` splits on commas, semicolons, new lines and spaces, and takes the address out of `Ana Silva <ana@example.com>`. It drops a `mailto:` and lowercases the part after the `@`. An address passes when `<input type="email">` would accept it and its domain has a dot, so `ana@localhost` stays in the box. Two addresses are the same whatever their case. The error line reads "Enter email addresses in the correct format, like name@example.com".
+`emailPreset` splits on commas, semicolons, new lines and spaces, never inside quotes or angle brackets, and takes the address out of `Ana Silva <ana@example.com>`. A pasted line of several named addresses gives every address, and `"Silva, Ana" <ana@example.com>` gives one. It drops a `mailto:` and lowercases the part after the `@`. An address passes when `<input type="email">` would accept it and its domain has a dot, so `ana@localhost` stays in the box. Two addresses are the same whatever their case. The error line reads "Enter email addresses in the correct format, like name@example.com".
 
 ### Domains
 

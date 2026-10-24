@@ -51,6 +51,29 @@ describe('emailPreset', () => {
     ).toEqual(['ana@example.com', 'bo@example.com', 'cy@example.com', 'dee@example.com']);
   });
 
+  it('keeps every address in a piece holding a name, in order, and drops only the name', () => {
+    expect(clean(emailPreset, 'Ana <ana@example.com> Bo <bo@example.com>')).toEqual([
+      'ana@example.com',
+      'bo@example.com',
+    ]);
+    expect(clean(emailPreset, 'ana@example.com <bo@example.com> cy@example.com')).toEqual([
+      'ana@example.com',
+      'bo@example.com',
+      'cy@example.com',
+    ]);
+    expect(clean(emailPreset, '"ana@example.com" <ana@example.com>')).toEqual(['ana@example.com']);
+  });
+
+  it('never splits inside quotes, so a quoted name or local part stays whole', () => {
+    expect(clean(emailPreset, '"Smith, Ana" <ana@example.com>; bo@example.com')).toEqual([
+      'ana@example.com',
+      'bo@example.com',
+    ]);
+    // The standard refuses a quoted local part, so it stays in the box as typed, not cut at its space.
+    expect(clean(emailPreset, '"ana smith"@example.com')).toEqual(['"ana smith"@example.com']);
+    expect(accepts(emailPreset, '"ana smith"@example.com')).toBe(false);
+  });
+
   it('opens an email keyboard, left to right, with nothing corrected', () => {
     expect(emailPreset.inputProps).toEqual({
       inputMode: 'email',

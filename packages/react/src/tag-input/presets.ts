@@ -62,15 +62,53 @@ const ALL_DIGITS = /^\p{N}+$/u;
 const SCHEME = /^[a-z][a-z0-9+.-]*:\/\//i;
 
 /**
- * Email addresses. Splits on commas, semicolons and new lines, takes the address out of `Name <address>`, and
- * splits what is left on white space; drops a `mailto:` and angle brackets and lowercases the domain; accepts what
- * `<input type="email">` accepts with a dot in the domain; compares without case.
+ * Splits text into pieces at commas, semicolons and new lines, and each piece into words at white space, never
+ * inside quotes or angle brackets, so `"Smith, Ana" <ana@example.com>` is one piece of two words.
+ */
+function emailPieces(text: string): string[][] {
+  const pieces: string[][] = [];
+  let words: string[] = [];
+  let word = '';
+  let closer = '';
+  for (const char of text) {
+    if (closer !== '') {
+      word += char;
+      if (char === closer) closer = '';
+    } else if (/[,;\r\n]/.test(char)) {
+      if (word !== '') words.push(word);
+      if (words.length > 0) pieces.push(words);
+      word = '';
+      words = [];
+    } else if (/\s/.test(char)) {
+      if (word !== '') words.push(word);
+      word = '';
+    } else {
+      if (char === '"') closer = '"';
+      else if (char === '<') closer = '>';
+      word += char;
+    }
+  }
+  if (word !== '') words.push(word);
+  if (words.length > 0) pieces.push(words);
+  return pieces;
+}
+
+/**
+ * Email addresses. Splits on commas, semicolons and new lines, then on white space, never inside quotes or angle
+ * brackets; in a piece holding `Name <address>`, keeps every address, bracketed or bare, and drops the name;
+ * drops a `mailto:` and angle brackets and lowercases the domain; accepts what `<input type="email">` accepts with
+ * a dot in the domain; compares without case.
  */
 export const emailPreset: TagInputPreset = {
   split: (text) =>
-    filled(text.split(/[,;\r\n]+/)).flatMap((piece) => {
-      const bracketed = /<([^<>]*)>/.exec(piece);
-      return bracketed ? filled([bracketed[1] ?? '']) : filled(piece.split(/\s+/));
+    emailPieces(text).flatMap((words) => {
+      if (!words.some((word) => /<[^<>]*>/.test(word))) return words;
+      return words.flatMap((word) => {
+        const bracketed = /<([^<>]*)>/.exec(word);
+        if (bracketed) return filled([bracketed[1] ?? '']);
+        // A name's words, quoted or not, are dropped; a bare address beside the bracketed ones is kept.
+        return word.includes('@') && !/^"[^"]*"$/.test(word) ? [word] : [];
+      });
     }),
   normalize: (value) => {
     const bare = value

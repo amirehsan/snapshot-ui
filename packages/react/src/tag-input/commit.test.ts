@@ -92,6 +92,20 @@ describe("commitText in 'typed' mode", () => {
     expect(result.text).toBe('');
   });
 
+  it('waits through a comma inside a quoted name, and adds the address after it', () => {
+    const typing = commitText('"Smith,', [], emailPreset, { mode: 'typed' });
+    expect(typing).toMatchObject({ values: [], text: '"Smith,', reason: null });
+    const done = commitText('"Smith, Ana" <ana@example.com>,', [], emailPreset, { mode: 'typed' });
+    expect(done).toMatchObject({ values: [ANA], text: '' });
+  });
+
+  it('keeps every address of a pasted line of named addresses', () => {
+    const result = commitText('Ana <ana@example.com> Bo <bo@example.com>', [], emailPreset, {
+      mode: 'enter',
+    });
+    expect(result).toMatchObject({ values: [ANA, BO], text: '', reason: null });
+  });
+
   it('returns the text unchanged with no reason past the limit', () => {
     const result = commitText(`${BO},`, [ANA], emailPreset, { mode: 'typed', maxValues: 1 });
     expect(result).toMatchObject({ values: [ANA], text: `${BO},`, reason: null });
