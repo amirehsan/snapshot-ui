@@ -13152,7 +13152,10 @@ The move happens only when focus is on the pressed button, inside the
 set, or lost, so focus the app moved elsewhere stays. Controlled, the
 app's `onChange` decides: the words are drawn and focus moves only once
 the rows show the add or the remove, so one the app refuses says nothing
-and moves nothing (spec correction 56). The status is in the
+and moves nothing (spec correction 56). The words are written in the
+move's frame, once focus is in its place, since a screen reader reads a
+focus move at once and cuts a polite status said before it, as
+FieldExtras' status waits for its move (spec correction 94). The status is in the
 server's HTML, empty, writes each event's words as a new node so a
 repeated sentence is said again, and empties after five seconds, as
 FieldExtras' does. A status that speaks inside `aria-busy="true"` warns

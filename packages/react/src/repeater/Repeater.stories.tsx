@@ -342,21 +342,24 @@ export const RepeaterFocus: Story = {
     });
     await waitFor(() => expect(amount).toHaveFocus(), { timeout: 5000 });
     await expect(stop()).toBeLessThanOrEqual(1);
-    await expect(status).toHaveTextContent('Tier 3 added. 3 of 3. Remove a tier to add another.');
+    await waitFor(
+      () => expect(status).toHaveTextContent('Tier 3 added. 3 of 3. Remove a tier to add another.'),
+      { timeout: 5000 },
+    );
 
     // A middle row by a pointer: the same control, Remove, in the row now in its place.
     stop = watchBody();
     await userEvent.click(remove('Tier 2'));
     await waitFor(() => expect(remove('Tier 2')).toHaveFocus(), { timeout: 5000 });
     await expect(stop()).toBeLessThanOrEqual(1);
-    await expect(status).toHaveTextContent('Tier 2 removed');
+    await waitFor(() => expect(status).toHaveTextContent('Tier 2 removed'), { timeout: 5000 });
 
     // The last row by a key: Remove in the new last row.
     stop = watchBody();
     await userEvent.keyboard('{Enter}');
     await waitFor(() => expect(remove('Tier 1')).toHaveFocus(), { timeout: 5000 });
     await expect(stop()).toBeLessThanOrEqual(1);
-    await expect(status).toHaveTextContent('Tier 2 removed');
+    await waitFor(() => expect(status).toHaveTextContent('Tier 2 removed'), { timeout: 5000 });
 
     // The only row: Add.
     stop = watchBody();
@@ -365,7 +368,7 @@ export const RepeaterFocus: Story = {
       timeout: 5000,
     });
     await expect(stop()).toBeLessThanOrEqual(1);
-    await expect(status).toHaveTextContent('Tier 1 removed');
+    await waitFor(() => expect(status).toHaveTextContent('Tier 1 removed'), { timeout: 5000 });
     await expect(canvas.getByText('No tiers. The coach never waits.')).toBeVisible();
   },
 };
@@ -398,8 +401,13 @@ export const AtMaximumReason: Story = {
     await expect(add).toBeDisabled();
     await expect(add).toHaveAccessibleDescription('3 of 3. Remove a tier to add another.');
     await expect(part(canvasElement, '.repeater-full')).toBeVisible();
-    await expect(part(canvasElement, '.repeater-status')).toHaveTextContent(
-      'Tier 3 added. 3 of 3. Remove a tier to add another.',
+    // Said in the move's frame, once focus is on the new row's field.
+    await waitFor(
+      () =>
+        expect(part(canvasElement, '.repeater-status')).toHaveTextContent(
+          'Tier 3 added. 3 of 3. Remove a tier to add another.',
+        ),
+      { timeout: 5000 },
     );
     // From Tier 3's Remove, Tab goes past the disabled Add to what follows.
     await focusOn(canvas.getByRole('button', { name: 'Remove, Tier 3' }));

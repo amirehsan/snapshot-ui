@@ -613,6 +613,34 @@ describe('Repeater', () => {
     expect(add()).toHaveAccessibleDescription('3 of 3. Remove a tier to add another.');
   });
 
+  it.each([
+    [
+      'an add',
+      () => add(),
+      () => within(row('Tier 3')).getByRole('textbox', { name: 'Up to' }),
+      'Tier 3 added',
+    ],
+    [
+      'a remove',
+      () => screen.getByRole('button', { name: 'Remove, Tier 1' }),
+      () => screen.getByRole('button', { name: 'Remove, Tier 1' }),
+      'Tier 1 removed',
+    ],
+  ])('speaks after %s once focus has moved, as FieldExtras does', async (_event, pressed, focused, says) => {
+    const { container } = render(<Controlled />);
+    const host = status(container);
+    // What held focus each time the status changed. A screen reader reads a focus move at once, cutting a polite
+    // status said before it, so the status speaks once focus is in its place.
+    const heldFocus: (Element | null)[] = [];
+    new MutationObserver(() => {
+      heldFocus.push(document.activeElement);
+    }).observe(host, { childList: true, subtree: true, characterData: true });
+    press(pressed());
+    await frames();
+    expect(host).toHaveTextContent(says);
+    expect(heldFocus).toEqual([focused()]);
+  });
+
   it('says a repeated sentence again', async () => {
     const { container } = render(<Controlled start={TWO.slice(0, 1)} />);
     press(add());
@@ -634,6 +662,10 @@ describe('Repeater', () => {
     try {
       const { container } = render(<Controlled />);
       press(add());
+      // Said in the frame after the commit, once focus has moved.
+      act(() => {
+        vi.advanceTimersByTime(20);
+      });
       expect(status(container)).toHaveTextContent('Tier 3 added');
       act(() => {
         vi.advanceTimersByTime(5000);

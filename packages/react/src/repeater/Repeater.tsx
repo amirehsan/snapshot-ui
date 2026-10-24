@@ -265,8 +265,8 @@ export function Repeater<T extends RepeaterRow>({
   const heard = said?.count === rows.length;
 
   /**
-   * Writes `words` to the status as a new node, and moves focus to `place` in the frame after the commit, once
-   * `count` rows are drawn: an add or a remove the app refuses says nothing and moves nothing.
+   * Moves focus to `place` in the frame after the commit, once `count` rows are drawn, then writes `words` to the
+   * status as a new node: an add or a remove the app refuses says nothing and moves nothing.
    */
   const announce = (
     words: string,
@@ -275,21 +275,25 @@ export function Repeater<T extends RepeaterRow>({
     place: (root: HTMLElement) => HTMLElement | null,
   ): void => {
     events.current += 1;
+    const event = events.current;
     const root = rootRef.current;
-    if (root?.closest('[aria-busy="true"]')) setBusy(true);
-    setSaid({ words, event: events.current, count });
-    clearTimeout(hold.current);
-    hold.current = setTimeout(() => {
-      setSaid(null);
-    }, HOLD_MS);
     cancelMove.current?.();
     cancelMove.current = afterCommit(() => {
       if (!root?.isConnected || root.querySelectorAll(':scope > ol > li').length !== count) return;
       // The pressed button, the body (Safari leaves a pressed button unfocused, Chromium blurs a Remove that
       // leaves), or nothing: the move is ours. Focus the app moved elsewhere stays there.
       const active = document.activeElement;
-      if (!focusIsLost() && active !== pressed && !root.contains(active)) return;
-      focusNamedPlace(place(root) ?? (takesFocus(addRef.current) ? addRef.current : null));
+      if (focusIsLost() || active === pressed || root.contains(active)) {
+        focusNamedPlace(place(root) ?? (takesFocus(addRef.current) ? addRef.current : null));
+      }
+      // Said after the move: a screen reader reads the focused field or Remove at once and would cut a polite
+      // status said before it, as FieldExtras' status waits for its move.
+      if (root.closest('[aria-busy="true"]')) setBusy(true);
+      setSaid({ words, event, count });
+      clearTimeout(hold.current);
+      hold.current = setTimeout(() => {
+        setSaid(null);
+      }, HOLD_MS);
     });
   };
 
