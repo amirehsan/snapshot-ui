@@ -53,6 +53,8 @@ export const CONTRAST_PAIRS = [
   })),
   // The folded collapsible card's dot, a graphic that carries meaning, on the card it sits on.
   { text: 'clay', ground: 'lifted', minimum: NON_TEXT, shows: 'the folded card marker on lifted' },
+  // The folded accordion's dot, the same marker, on the page an accordion sits on outside a card.
+  { text: 'clay', ground: 'canvas', minimum: NON_TEXT, shows: 'the folded accordion marker on canvas' },
   ...['canvas', 'lifted', 'bone', 'float', 'raised'].map((ground) => ({
     text: 'error',
     ground,

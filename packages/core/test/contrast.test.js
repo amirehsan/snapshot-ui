@@ -2362,3 +2362,77 @@ describe('the account menu and the theme switch', () => {
     }
   });
 });
+
+describe('the accordion', () => {
+  /** A token color painted over `groundName` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // A title is ink and a note and the chevron slate, on the canvas or in a card on lifted; the folded marker is
+  // clay, gated on lifted for CollapsibleCard. The gate holds each, so the accordion adds one pair: its marker
+  // on the canvas, where CollapsibleCard never sits. A disabled title is taupe, exempt as disabled text.
+  it('cites ink and slate on canvas and lifted, and clay on lifted, which the gate holds', () => {
+    for (const text of ['ink', 'slate']) {
+      for (const ground of ['canvas', 'lifted']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'clay', ground: 'lifted', minimum: NON_TEXT }),
+    );
+    for (const { name, ground, light, dark } of [
+      { name: 'ink', ground: 'canvas', light: 16.25, dark: 19.31 },
+      { name: 'ink', ground: 'lifted', light: 17.84, dark: 17.42 },
+      { name: 'slate', ground: 'canvas', light: 4.84, dark: 7.26 },
+      { name: 'slate', ground: 'lifted', light: 5.31, dark: 6.94 },
+      { name: 'clay', ground: 'lifted', light: 6.81, dark: 6.82 },
+    ]) {
+      expect(measured('light', name, ground), `${name} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, ground), `${name} on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+
+  it('gates clay on canvas at 3:1 in both modes', () => {
+    expect(CONTRAST_PAIRS).toContainEqual({
+      text: 'clay',
+      ground: 'canvas',
+      minimum: NON_TEXT,
+      shows: 'the folded accordion marker on canvas',
+    });
+    expect(measured('light', 'clay', 'canvas')).toBeCloseTo(6.2, 2);
+    expect(measured('dark', 'clay', 'canvas')).toBeCloseTo(7.57, 2);
+    expect(contrastFailures(paletteFor(tokens, 'light'), 'light')).toEqual([]);
+    expect(contrastFailures(paletteFor(tokens, 'dark'), 'dark')).toEqual([]);
+  });
+});
+
+describe('the tag input', () => {
+  /** A token color painted over `groundName` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // A tag is MultiSelect's bone pill, drawn by the same rules: its text ink and its remove glyph slate, a graphic
+  // that needs 3:1 and has the text minimum. The gate holds both, so the tag input adds no pair.
+  it('cites the tag ink and the remove glyph slate on bone, MultiSelect pairs', () => {
+    for (const text of ['ink', 'slate']) {
+      expect(CONTRAST_PAIRS, `${text} on bone`).toContainEqual(
+        expect.objectContaining({ text, ground: 'bone', minimum: TEXT }),
+      );
+    }
+    for (const { name, light, dark } of [
+      { name: 'ink', light: 16.76, dark: 15.36 },
+      { name: 'slate', light: 4.99, dark: 6.44 },
+    ]) {
+      expect(measured('light', name, 'bone'), `${name} on bone, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, 'bone'), `${name} on bone, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+});

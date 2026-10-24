@@ -1,0 +1,59 @@
+/*
+ * TagInput, derived in docs/design-system.md ("TagInput"): MultiSelect's frame and tags, shared by selector in
+ * multi-select.css, so the two are one object. This file holds only what differs. There is no field button and no
+ * Spinner, so the frame ends with a text input's own padding; the box wraps to a row of its own once less than
+ * 8rem is left beside the last tag; a left-to-right preset keeps each tag's text in its own order on a Persian
+ * page while the tags still run from the right. The tags are concentric with the frame by MultiSelect's rule.
+ */
+@layer components {
+  .tag-input {
+    /* An address, a domain or a path is one word: a tag ellipsizes it, and a hint or an error breaks only a word
+       wider than its line (settings lesson 18). */
+    overflow-wrap: break-word;
+  }
+
+  /* No field button and no spinner: the frame ends with a text input's own padding. */
+  .tag-input-control {
+    padding-inline-end: 1.5rem;
+  }
+
+  /* The changed dot of a field with no label sits at the text's end, 24px in (field.css's default place), as a
+     text input's does, and the box stops a dot and a part step sooner. */
+  .tag-input[data-changed][data-unlabelled] .tag-input-control {
+    padding-inline-end: calc(1.5rem + 0.375rem + var(--spacing-part));
+  }
+
+  /* The box wraps to a row of its own once less than 8rem is left beside the last tag. */
+  .tag-input-input {
+    flex: 1 1 8rem;
+  }
+
+  /* An address keeps its order on a Persian page while the tags still run from the right. */
+  .tag-input[data-ltr] .tag-input-tag-text {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  /* The count against the limit, at the label row's end. */
+  .tag-input .field-head > .field-counter {
+    margin-inline-start: auto;
+  }
+
+  /* The polite status: read, never seen, and out of the field's grid, placed on both lines (insights lesson 9). */
+  .tag-input-status {
+    grid-area: 1 / 1 / span 1 / span 1;
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  @media (forced-colors: active) {
+    /* The placeholder of a disabled field is disabled text in the reader's palette. */
+    .tag-input[data-disabled] .tag-input-input::placeholder {
+      color: graytext;
+    }
+  }
+}

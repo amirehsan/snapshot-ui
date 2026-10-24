@@ -16,6 +16,8 @@ import { DataTable } from '../src/data-table';
 import { DatePicker } from '../src/date-picker';
 import { DateRangePicker } from '../src/date-range-picker';
 import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
+import { Accordion, AccordionItem } from '../src/accordion';
+import { TagInput, emailPreset } from '../src/tag-input';
 import { CollapsibleCard } from '../src/collapsible-card';
 import { ComboBox } from '../src/combo-box';
 import { CommandPalette } from '../src/command-palette';
@@ -102,6 +104,46 @@ const UPLOADS: UploadItem[] = [
 ];
 
 const noop = (): void => undefined;
+
+/** Three sections, as a settings page draws them on the server: Billing open, Notifications folded and marked, Danger zone disabled. */
+function ServerSections({ multiple = true }: { multiple?: boolean }): ReactElement {
+  return (
+    <Accordion hasExpandAll={multiple} allowsMultipleExpanded={multiple} defaultExpandedKeys={['billing']}>
+      <AccordionItem id="billing" title="Billing address">
+        <p>12 Rose Lane</p>
+      </AccordionItem>
+      <AccordionItem
+        id="notifications"
+        title="Notifications"
+        note="Email, push and digest settings"
+        isChanged
+      >
+        <p>Email, push and digest</p>
+      </AccordionItem>
+      <AccordionItem id="danger" title="Danger zone" isDisabled>
+        <p>Delete the account</p>
+      </AccordionItem>
+    </Accordion>
+  );
+}
+
+/** An invite field as a sharing form draws it on the server: two addresses, a limit and a hint. */
+function ServerInvite({
+  values = ['ana@example.com', 'bo@example.com'],
+}: {
+  values?: string[];
+}): ReactElement {
+  return (
+    <TagInput
+      label="Invite people"
+      description="Separate addresses with commas or spaces."
+      name="invite"
+      preset={emailPreset}
+      maxValues={10}
+      defaultValue={values}
+    />
+  );
+}
 
 /** The consumer's three default wait tiers, as a controlled Repeater draws them, for the server suites. */
 function ServerTiers({ rows }: { rows: { id: string; amount: number; wait: string }[] }): ReactElement {
@@ -399,6 +441,52 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       <SegmentedControlItem value="dark">Dark</SegmentedControlItem>
     </SegmentedControl>,
     ['role="radiogroup"', 'class="segmented-track"', 'class="segmented-room"', 'Dark'],
+  ],
+  [
+    // Every heading and toggle with its state, the open panel's content, the folded panels hidden, the marker on
+    // the folded and changed item, and Show all naming every panel: the server's HTML is the accordion's face.
+    'Accordion',
+    <ServerSections />,
+    [
+      'data-multiple="" class="accordion"',
+      'class="accordion-controls"',
+      'class="accordion-item" data-expanded="" data-instant=""',
+      '<h3 class="accordion-heading">',
+      'aria-expanded="true"',
+      'aria-expanded="false"',
+      'hidden=""><div class="accordion-body"><p>Email, push and digest</p></div>',
+      '<span class="accordion-toggle-text">Notifications<span class="accordion-marker" aria-hidden="true"></span></span>',
+      '<p class="accordion-note">Email, push and digest settings</p>',
+      'data-disabled=""',
+      'Show all sections',
+    ],
+    ['data-folding'],
+  ],
+  [
+    // The label with its count, a tag per value, a hidden input per value, the box with no name, and the empty
+    // status host: a form submitted before hydration sends the values already there.
+    'TagInput',
+    <ServerInvite />,
+    [
+      'class="field tag-input"',
+      'data-ltr=""',
+      '<span role="status" class="field-counter">2/10</span>',
+      'class="input tag-input-control"',
+      '<span class="tag-input-tag-text" dir="ltr">ana@example.com</span>',
+      '<span class="tag-input-tag-text" dir="ltr">bo@example.com</span>',
+      '<input type="hidden" name="invite" value="ana@example.com"/>',
+      '<input type="hidden" name="invite" value="bo@example.com"/>',
+      'class="tag-input-input"',
+      'Separate addresses with commas or spaces.',
+      '<div class="tag-input-status" role="status" aria-live="polite"></div>',
+    ],
+    ['name="invite" class', 'data-invalid'],
+  ],
+  [
+    'TagInput, empty',
+    <ServerInvite values={[]} />,
+    ['<input type="hidden" name="invite" value=""/>', 'class="tag-input-input"'],
+    ['tag-input-tag', 'role="grid"'],
   ],
   [
     'CollapsibleCard',
@@ -1414,6 +1502,22 @@ describe('the client components on the server', () => {
     const html = renderToString(element);
     for (const part of contains) expect(html).toContain(part);
     for (const part of excludes) expect(html).not.toContain(part);
+  });
+
+  // React Aria merges an id given to a disclosure panel with its own only where there is a DOM, so a server would
+  // write its own id, and the toggles and Show all would name panels that are not there.
+  it("writes the accordion's panel ids on the server, where its toggles and Show all name them", () => {
+    const html = renderToString(<ServerSections />);
+    const ids = [...html.matchAll(/<div ([^>]*)class="accordion-fold"([^>]*)>/g)].map(
+      (match) => /\bid="([^"]+)"/.exec(`${match[1] ?? ''} ${match[2] ?? ''}`)?.[1],
+    );
+    expect(ids).toHaveLength(3);
+    for (const id of ids) expect(id).toMatch(/-panel-[0-2]$/);
+    const controls = [...html.matchAll(/<button ([^>]*)class="accordion-toggle"([^>]*)>/g)].map(
+      (match) => /aria-controls="([^"]+)"/.exec(`${match[1] ?? ''} ${match[2] ?? ''}`)?.[1],
+    );
+    expect(controls).toEqual(ids);
+    expect(html).toContain(`aria-controls="${ids.join(' ')}"`);
   });
 
   // Prose hands a component back to the layer below its own rules by its root class, from a list core's build

@@ -1,6 +1,7 @@
 {
   "title": "Components",
   "pages": [
+    "accordion",
     "account-menu",
     "app-shell",
     "avatar",
@@ -58,6 +59,7 @@
     "stat-tile",
     "switch",
     "tabs",
+    "tag-input",
     "theme-switch",
     "text-area",
     "text-field",

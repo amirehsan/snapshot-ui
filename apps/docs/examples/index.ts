@@ -1,4 +1,8 @@
 import type { ComponentType } from 'react';
+import AccordionBasic from './accordion-basic';
+import AccordionExpandAll from './accordion-expand-all';
+import AccordionForm from './accordion-form';
+import AccordionSingle from './accordion-single';
 import AccountMenuHeader from './account-menu-header';
 import AccountMenuRail from './account-menu-rail';
 import AccountsRecipe from './accounts-recipe';
@@ -214,6 +218,10 @@ import TabsBasic from './tabs-basic';
 import TabsChanged from './tabs-changed';
 import TabsLinks from './tabs-links';
 import TabsOverflow from './tabs-overflow';
+import TagInputBasic from './tag-input-basic';
+import TagInputForm from './tag-input-form';
+import TagInputLimit from './tag-input-limit';
+import TagInputPresets from './tag-input-presets';
 import ThemeSwitchBasic from './theme-switch-basic';
 import ThemeSwitchMenu from './theme-switch-menu';
 import ThemeSwitchRadio from './theme-switch-radio';
@@ -234,6 +242,10 @@ import UploadListStatuses from './upload-list-statuses';
 
 /** Every example a page may show with <Preview name="..." />. */
 export const examples = {
+  'accordion-basic': AccordionBasic,
+  'accordion-expand-all': AccordionExpandAll,
+  'accordion-form': AccordionForm,
+  'accordion-single': AccordionSingle,
   'account-menu-header': AccountMenuHeader,
   'account-menu-rail': AccountMenuRail,
   'accounts-recipe': AccountsRecipe,
@@ -449,6 +461,10 @@ export const examples = {
   'tabs-changed': TabsChanged,
   'tabs-links': TabsLinks,
   'tabs-overflow': TabsOverflow,
+  'tag-input-basic': TagInputBasic,
+  'tag-input-form': TagInputForm,
+  'tag-input-limit': TagInputLimit,
+  'tag-input-presets': TagInputPresets,
   'theme-switch-basic': ThemeSwitchBasic,
   'theme-switch-menu': ThemeSwitchMenu,
   'theme-switch-radio': ThemeSwitchRadio,

@@ -15,6 +15,8 @@ export interface FieldHeadProps {
   changedLabel?: string;
   /** The id of the chip, from `useChangedDescription`. */
   chipId: string;
+  /** What else the row holds after the chip, such as TagInput's count against its limit. */
+  children?: ReactNode;
 }
 
 /**
@@ -28,12 +30,13 @@ export interface FieldHeadProps {
  *
  * Internal: every field with a label row renders it. Not exported from the package.
  */
-export function FieldHead({ label, changedLabel, chipId }: FieldHeadProps): ReactElement {
+export function FieldHead({ label, changedLabel, chipId, children }: FieldHeadProps): ReactElement {
   const isInvalid = useContext(FieldErrorContext)?.isInvalid === true;
   return (
     <div className="field-head">
       <Label>{label}</Label>
       {isInvalid ? null : <FieldChanged id={chipId}>{changedLabel}</FieldChanged>}
+      {children}
     </div>
   );
 }

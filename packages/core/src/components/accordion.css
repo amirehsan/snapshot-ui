@@ -1,0 +1,254 @@
+/*
+ * Accordion, derived in docs/design-system.md ("Accordion"): rows that open and fold, a divider rule between
+ * items and no frame. The fold is CollapsibleCard's technique in this file's own selectors: a grid row that moves
+ * between 1fr and 0fr over 200ms, the body clipped only while folded or folding, nothing moving while the item
+ * carries data-instant. css.test.js ties the duration and easing to card.css's. Every rule reaches a part from
+ * its own item through child combinators, so a nested accordion's items follow only their own state.
+ */
+@layer components {
+  /* No fill, edge or corner: an accordion ends flush at a card's padding, and an app frames one on the page with
+     a Card. break-word lets a word longer than its line break inside the column, and keeps every other word
+     whole. It keeps its automatic minimum, its longest word, so a holder that sizes it from its content, a
+     squeezed flex row or an auto track, never takes it under a word (settings spec corrections 46 and 71). */
+  .accordion {
+    display: block;
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    overflow-wrap: break-word;
+  }
+
+  /* "Show all sections", a tertiary Button at the inline end above the first item. */
+  .accordion-controls {
+    display: flex;
+    justify-content: flex-end;
+    margin-block-end: var(--spacing-part);
+  }
+
+  /* The Dense data row: the target or the field's height, whichever is more, 48px, 40px compact and 44px compact
+     on a coarse pointer, with one line of the title centred in it by the padding. */
+  .accordion-item {
+    --accordion-row: max(var(--size-target), var(--size-field));
+    --accordion-pad: max(0px, calc((var(--accordion-row) - 1lh) / 2));
+
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+
+  /* One rule between two items, never above the first or under the last, DescriptionList's rule. */
+  .accordion-item + .accordion-item {
+    border-block-start: 1px solid var(--color-divider);
+  }
+
+  .accordion-heading {
+    margin: 0;
+    font: inherit;
+    letter-spacing: inherit;
+  }
+
+  /* The title is the toggle: the whole row is the target, and a title that wraps grows it. */
+  .accordion-toggle {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-part);
+    inline-size: 100%;
+    min-block-size: var(--accordion-row);
+    box-sizing: border-box;
+    padding: var(--accordion-pad) 0;
+    border: 0;
+    border-radius: var(--radius-micro);
+    background: none;
+    color: var(--color-ink);
+    font: inherit;
+    font-weight: 500;
+    letter-spacing: inherit;
+    text-align: start;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* The words take their own width and no more, so the folded marker follows the last word on one line. A long
+     word breaks only when it alone is wider than the row: break-word, never anywhere, so a title in a holder sized
+     by its content keeps its words whole (settings spec corrections 46 and 71). */
+  .accordion-toggle-text {
+    position: relative;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    overflow-wrap: break-word;
+  }
+
+  /* CollapsibleCard's 24px slate chevron at the row's end, level with the first line of a title that wraps. */
+  .accordion-chevron {
+    flex: none;
+    inline-size: 24px;
+    block-size: 24px;
+    margin-block: calc((1lh - 24px) / 2);
+    margin-inline-start: auto;
+    color: var(--color-slate);
+    transition: rotate 200ms ease;
+  }
+
+  .accordion-toggle:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  @media (hover: hover) {
+    .accordion-toggle:is(:hover, [data-hovered]):not(:disabled, [data-disabled]) .accordion-chevron {
+      color: var(--color-ink);
+    }
+  }
+
+  /* A press shows what hover does, since touch has no hover to show it. */
+  .accordion-toggle:is(:active, [data-pressed]):not(:disabled, [data-disabled]) .accordion-chevron {
+    color: var(--color-ink);
+  }
+
+  /* Title and chevron taupe, and no hover. */
+  .accordion-toggle:is(:disabled, [data-disabled]),
+  .accordion-toggle:is(:disabled, [data-disabled]) .accordion-chevron {
+    color: var(--color-taupe);
+    cursor: not-allowed;
+  }
+
+  /* Folded, the chevron turns a quarter toward the title, by card.css's turn, which the nearest dir sets. */
+  .accordion-item:not([data-expanded]) > .accordion-disclosure > .accordion-heading .accordion-chevron {
+    rotate: var(--card-chevron-turn, 90deg);
+  }
+
+  /* CollapsibleCard's folded marker: an 8px clay dot after the title's last word, out of the flow. */
+  .accordion-marker {
+    position: absolute;
+    inline-size: 8px;
+    block-size: 8px;
+    margin-block-start: calc((1lh - 8px) / 2);
+    margin-inline-start: var(--spacing-part);
+    border-radius: var(--radius-dot);
+    background-color: var(--color-clay);
+  }
+
+  /* A folded title keeps room for the dot, drawn or not, so the title never moves when it comes or goes. */
+  .accordion-item:not([data-expanded]) > .accordion-disclosure > .accordion-heading .accordion-toggle-text {
+    margin-inline-end: calc(8px + var(--spacing-part));
+  }
+
+  /* The note sits a part step under the title, inside the row's padding: it takes back the toggle's end padding
+     and gives it again under itself. */
+  .accordion-note {
+    margin: calc(var(--spacing-part) - var(--accordion-pad)) 0 0;
+    padding-block-end: var(--accordion-pad);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    color: var(--color-slate);
+    overflow-wrap: break-word;
+  }
+
+  /* The fold, CollapsibleCard's: a grid row between 1fr and 0fr, drawn only while the panel is shown, so a
+     browser without until-found falls back to the display: none of hidden. Its one column is 100%: the panel's
+     own width where that is known, so a long word breaks inside it, and its longest word where a holder sizes the
+     accordion from its content. */
+  .accordion-fold {
+    grid-template-columns: 100%;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 200ms ease;
+  }
+
+  .accordion-fold:not([hidden]) {
+    display: grid;
+  }
+
+  .accordion-item:not([data-expanded]) > .accordion-disclosure > .accordion-fold {
+    grid-template-rows: 0fr;
+  }
+
+  /* The Card body's rhythm, so fields in a panel take the same steps as fields in a card, in one 100% column, as
+     the fold's. */
+  .accordion-body {
+    display: grid;
+    grid-template-columns: 100%;
+    gap: var(--spacing-peer);
+    min-block-size: 0;
+    padding-block-end: var(--spacing-peer);
+    transition: padding-block-end 200ms ease;
+  }
+
+  .accordion-body > * {
+    margin: 0;
+  }
+
+  .accordion-item:not([data-expanded]) > .accordion-disclosure > .accordion-fold > .accordion-body {
+    padding-block-end: 0;
+  }
+
+  /* The body clips only while folded or folding, so a popup in an open panel is never cut off. */
+  .accordion-item:is(:not([data-expanded]), [data-folding])
+    > .accordion-disclosure
+    > .accordion-fold
+    > .accordion-body {
+    overflow: hidden;
+  }
+
+  /* After hydration, and for a find-in-page match or a field that fails, the change is drawn at once. */
+  .accordion-item[data-instant] > .accordion-disclosure > .accordion-heading .accordion-chevron,
+  .accordion-item[data-instant] > .accordion-disclosure > .accordion-fold,
+  .accordion-item[data-instant] > .accordion-disclosure > .accordion-fold > .accordion-body {
+    transition: none;
+  }
+
+  /* Folded panels print open (ruling 6), with no chevron and no Show all. content-visibility undoes the user
+     agent's rule for hidden="until-found". */
+  @media print {
+    .accordion-fold,
+    .accordion-fold[hidden] {
+      display: grid;
+      content-visibility: visible;
+      transition: none;
+    }
+
+    .accordion-item:not([data-expanded]) > .accordion-disclosure > .accordion-fold {
+      grid-template-rows: 1fr;
+    }
+
+    /* The clip's own selector, so it wins at the same specificity by coming later. */
+    .accordion-item:is(:not([data-expanded]), [data-folding])
+      > .accordion-disclosure
+      > .accordion-fold
+      > .accordion-body {
+      overflow: visible;
+    }
+
+    .accordion-chevron,
+    .accordion-controls {
+      display: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .accordion-item + .accordion-item {
+      border-block-start-color: canvastext;
+    }
+
+    .accordion-chevron,
+    .accordion-toggle:is(:hover, [data-hovered], :active, [data-pressed]):not(:disabled, [data-disabled])
+      .accordion-chevron {
+      color: inherit;
+    }
+
+    .accordion-marker {
+      background-color: canvastext;
+    }
+
+    .accordion-toggle:is(:disabled, [data-disabled]),
+    .accordion-toggle:is(:disabled, [data-disabled]) .accordion-chevron {
+      color: graytext;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .accordion-chevron,
+    .accordion-fold,
+    .accordion-body {
+      transition: none;
+    }
+  }
+}

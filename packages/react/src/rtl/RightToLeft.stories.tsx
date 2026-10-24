@@ -3,6 +3,7 @@ import { House, Settings, ShoppingCart, User } from 'lucide-react';
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { I18nProvider, type Key } from 'react-aria-components';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
+import { Accordion, AccordionItem } from '../accordion';
 import { AppShell } from '../app-shell';
 import { Breadcrumb, Breadcrumbs } from '../breadcrumbs';
 import { Button } from '../button';
@@ -61,6 +62,7 @@ import { firstLineOffset, lineCount } from '../stories/paint';
 import { ownContent, Rendered } from '../stories/prose';
 import { Switch } from '../switch';
 import { Tab, TabList, TabPanel, Tabs } from '../tabs';
+import { TagInput, emailPreset } from '../tag-input';
 import { ThemeMenu, type ThemeChoice } from '../theme-switch';
 import { TextArea } from '../text-area';
 import { TextField } from '../text-field';
@@ -2698,5 +2700,121 @@ export const AccountMenuMirrored: Story = {
     await expect(rect(find(theme, '.menu-item-submenu')).left).toBeLessThan(
       rect(find(theme, '.menu-item-end')).left,
     );
+  },
+};
+
+/**
+ * Three Persian sections: each title at the right of its row and the chevron at the left end, the end of the row
+ * in right to left. Folded, the chevron turns toward the title, to the right, and the clay dot follows the title's
+ * last word to its left. Arrow Down still moves to the next title: the keys are up and down, which never mirror.
+ */
+export const AccordionMirrored: Story = {
+  tags: ['!no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" data-font="vazirmatn" style={{ width: 'min(32rem, calc(100vw - 2rem))' }}>
+        <Accordion defaultExpandedKeys={['billing']}>
+          <AccordionItem id="billing" title="نشانی صورت‌حساب">
+            <p>خیابان گل سرخ، پلاک ۱۲.</p>
+          </AccordionItem>
+          <AccordionItem
+            id="notifications"
+            title="اعلان‌ها"
+            note="ایمیل، اعلان و خلاصه‌ی هفتگی"
+            isChanged
+            changedLabel="تغییر کرده"
+          >
+            <p>رسیدها با ایمیل می‌آیند.</p>
+          </AccordionItem>
+          <AccordionItem id="danger" title="منطقه‌ی خطر">
+            <p>بستن حساب.</p>
+          </AccordionItem>
+        </Accordion>
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    await document.fonts.load('500 16px Vazirmatn', 'اعلان‌ها');
+    await document.fonts.ready;
+    const [open, folded] = [...canvasElement.querySelectorAll<HTMLElement>('.accordion-item')];
+    if (!open || !folded) throw new Error('Three items expected');
+    const toggle = rect(find(open, '.accordion-toggle'));
+    // The words start at the right of the row, and the chevron is at its left end.
+    await expectSameEdge(lastText(find(open, '.accordion-toggle-text')).right, toggle.right);
+    await expectSameEdge(rect(find(open, '.accordion-chevron')).left, toggle.left);
+    // Open, the chevron points down; folded, it turns a quarter toward the title, to the right.
+    await expect(getComputedStyle(find(open, '.accordion-chevron')).rotate).toBe('none');
+    await expect(getComputedStyle(find(folded, '.accordion-chevron')).rotate).toBe('-90deg');
+    // The dot follows the folded title's words a part step to their left, short of the chevron.
+    const dot = rect(find(folded, '.accordion-marker'));
+    await expectSameEdge(lastText(find(folded, '.accordion-toggle-text')).left - dot.right, 8);
+    await expect(dot.left).toBeGreaterThan(rect(find(folded, '.accordion-chevron')).right);
+    // The note starts at the right too, under the title.
+    await expectSameEdge(
+      lastText(find(folded, '.accordion-note')).right,
+      rect(find(folded, '.accordion-toggle')).right,
+    );
+    // Arrow Down moves to the next title, as it does left to right; End to the last.
+    const canvas = within(canvasElement);
+    const first = canvas.getByRole('button', { name: 'نشانی صورت‌حساب' });
+    await waitFor(() => {
+      if (document.activeElement !== first) first.focus();
+      return expect(first).toHaveFocus();
+    });
+    await userEvent.keyboard('{ArrowDown}');
+    const second = canvas.getByRole('button', { name: 'اعلان‌ها' });
+    await waitFor(() => expect(second).toHaveFocus());
+    await userEvent.keyboard('{End}');
+    await waitFor(() => expect(canvas.getByRole('button', { name: 'منطقه‌ی خطر' })).toHaveFocus());
+    // The shot shows the sections at rest, with no ring.
+    (document.activeElement as HTMLElement | null)?.blur();
+  },
+};
+
+/**
+ * Three addresses in a Persian invite field: the tags run from the frame's right, the first at the right, and each
+ * address keeps its own order inside its tag, its local part left of its @. Arrow Left moves to the next tag, which
+ * is drawn to the left.
+ */
+export const TagInputMirrored: Story = {
+  tags: ['!no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" data-font="vazirmatn" style={{ width: 'min(32rem, calc(100vw - 2rem))' }}>
+        <TagInput
+          label="دعوت از افراد"
+          description="نشانی‌ها را با ویرگول یا فاصله جدا کنید."
+          preset={emailPreset}
+          defaultValue={['ana@example.com', 'bo@example.com', 'cy@example.com']}
+          labels={{ added: 'افزوده', remove: 'حذف' }}
+        />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    await document.fonts.load('500 16px Vazirmatn', 'دعوت از افراد');
+    await document.fonts.ready;
+    const frame = find(canvasElement, '.tag-input-control');
+    const tags = [...canvasElement.querySelectorAll<HTMLElement>('.tag-input-tag')];
+    const [first, second] = tags;
+    if (!first || !second) throw new Error('Three tags expected');
+    // The first tag at the right of the frame, inside its padding; the second to its left.
+    await expect(rect(frame).right - rect(first).right).toBeLessThan(16);
+    await expect(rect(second).right).toBeLessThanOrEqual(rect(first).left + 0.5);
+    // Each address left to right inside its tag: its first letter left of its @.
+    for (const text of canvasElement.querySelectorAll<HTMLElement>('.tag-input-tag-text')) {
+      const at = text.textContent.indexOf('@');
+      await expect(characterBox(text, 0).left).toBeLessThan(characterBox(text, at).left);
+      await expect(getComputedStyle(text).direction).toBe('ltr');
+    }
+    // Arrow Left goes to the next tag, drawn to the left.
+    await waitFor(() => {
+      if (document.activeElement !== first) first.focus();
+      return expect(first).toHaveFocus();
+    });
+    await userEvent.keyboard('{ArrowLeft}');
+    await waitFor(() => expect(second).toHaveFocus());
+    // The shot shows the field at rest, with no ring.
+    second.blur();
   },
 };

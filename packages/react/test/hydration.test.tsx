@@ -35,6 +35,8 @@ import { accountRail } from './account-menu-fixture';
 import { ThemeSwitch } from '../src/theme-switch';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
+import { Accordion, AccordionItem } from '../src/accordion';
+import { TagInput, emailPreset } from '../src/tag-input';
 import { Gauge } from '../src/gauge';
 import { MonthGrid } from '../src/month-grid';
 import {
@@ -142,6 +144,46 @@ const DEFAULT_TIERS = [
   { id: 'b', amount: 50000, wait: 'week' },
   { id: 'c', amount: 150000, wait: 'month' },
 ];
+
+/** Three sections, as a settings page draws them on the server: Billing open, Notifications folded and marked, Danger zone disabled. */
+function ServerSections({ multiple = true }: { multiple?: boolean }): ReactElement {
+  return (
+    <Accordion hasExpandAll={multiple} allowsMultipleExpanded={multiple} defaultExpandedKeys={['billing']}>
+      <AccordionItem id="billing" title="Billing address">
+        <p>12 Rose Lane</p>
+      </AccordionItem>
+      <AccordionItem
+        id="notifications"
+        title="Notifications"
+        note="Email, push and digest settings"
+        isChanged
+      >
+        <p>Email, push and digest</p>
+      </AccordionItem>
+      <AccordionItem id="danger" title="Danger zone" isDisabled>
+        <p>Delete the account</p>
+      </AccordionItem>
+    </Accordion>
+  );
+}
+
+/** An invite field as a sharing form draws it on the server: two addresses, a limit and a hint. */
+function ServerInvite({
+  values = ['ana@example.com', 'bo@example.com'],
+}: {
+  values?: string[];
+}): ReactElement {
+  return (
+    <TagInput
+      label="Invite people"
+      description="Separate addresses with commas or spaces."
+      name="invite"
+      preset={emailPreset}
+      maxValues={10}
+      defaultValue={values}
+    />
+  );
+}
 
 const HYDRATED: [
   name: string,
@@ -865,6 +907,60 @@ const HYDRATED: [
         'No tiers. The coach never waits.',
       );
       expect(document.activeElement).toBe(document.body);
+    },
+  ],
+  [
+    // The state the server drew, the marker kept, the transitions held off until two frames after hydration, and
+    // no focus moved.
+    'Accordion',
+    <ServerSections />,
+    (container) => {
+      const items = [...container.querySelectorAll('.accordion-item')];
+      expect(items.map((item) => item.hasAttribute('data-expanded'))).toEqual([true, false, false]);
+      expect(items.every((item) => item.hasAttribute('data-instant'))).toBe(true);
+      expect(container.querySelector('.accordion-marker')).not.toBeNull();
+      const folds = [...container.querySelectorAll('.accordion-fold')].map((fold) => fold.id);
+      expect(container.querySelector('.accordion-expand-all')).toHaveAttribute(
+        'aria-controls',
+        folds.join(' '),
+      );
+      expect(document.activeElement).toBe(document.body);
+    },
+  ],
+  [
+    // The tags, the hidden inputs and the count the server drew, no focus moved and nothing said.
+    'TagInput',
+    <ServerInvite />,
+    (container) => {
+      expect([...container.querySelectorAll('.tag-input-tag-text')].map((tag) => tag.textContent)).toEqual([
+        'ana@example.com',
+        'bo@example.com',
+      ]);
+      expect(
+        [...container.querySelectorAll<HTMLInputElement>('input[type="hidden"]')].map((input) => input.value),
+      ).toEqual(['ana@example.com', 'bo@example.com']);
+      expect(container.querySelector('.field-counter')).toHaveTextContent('2/10');
+      expect(container.querySelector('.tag-input-status')).toBeEmptyDOMElement();
+      expect(document.activeElement).toBe(document.body);
+    },
+  ],
+  [
+    'TagInput empty',
+    <ServerInvite values={[]} />,
+    (container) => {
+      expect(
+        [...container.querySelectorAll<HTMLInputElement>('input[type="hidden"]')].map((input) => input.value),
+      ).toEqual(['']);
+      expect(container.querySelector('.tag-input-tag')).toBeNull();
+    },
+  ],
+  [
+    'Accordion, one at a time',
+    <ServerSections multiple={false} />,
+    (container) => {
+      expect(container.querySelector('.accordion')).not.toHaveAttribute('data-multiple');
+      expect(container.querySelector('.accordion-controls')).toBeNull();
+      expect(container.querySelectorAll('.accordion-item[data-expanded]')).toHaveLength(1);
     },
   ],
 ];

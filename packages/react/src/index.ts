@@ -304,3 +304,20 @@ export {
   type ThemeSwitchProps,
 } from './theme-switch';
 export { AccountMenu, type AccountMenuProps } from './account-menu';
+export {
+  Accordion,
+  AccordionItem,
+  type AccordionItemProps,
+  type AccordionLabels,
+  type AccordionProps,
+} from './accordion';
+export {
+  TagInput,
+  domainPreset,
+  emailPreset,
+  pathPreset,
+  type TagInputBaseProps,
+  type TagInputLabels,
+  type TagInputPreset,
+  type TagInputProps,
+} from './tag-input';

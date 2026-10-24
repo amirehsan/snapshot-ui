@@ -504,6 +504,27 @@
     "limit": "3 kB"
   },
   {
+    "name": "import { Accordion, AccordionItem } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ Accordion, AccordionItem }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "4 kB"
+  },
+  {
+    "name": "import { TagInput } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ TagInput }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "5 kB"
+  },
+  {
+    "name": "import { emailPreset, domainPreset, pathPreset } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ emailPreset, domainPreset, pathPreset }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "1.5 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

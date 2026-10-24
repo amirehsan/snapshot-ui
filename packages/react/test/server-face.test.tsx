@@ -35,6 +35,8 @@ import { accountRail } from './account-menu-fixture';
 import { ThemeSwitch } from '../src/theme-switch';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
+import { Accordion, AccordionItem } from '../src/accordion';
+import { TagInput, emailPreset } from '../src/tag-input';
 import { Gauge } from '../src/gauge';
 import { MonthGrid } from '../src/month-grid';
 import {
@@ -127,6 +129,46 @@ const DEFAULT_TIERS = [
   { id: 'b', amount: 50000, wait: 'week' },
   { id: 'c', amount: 150000, wait: 'month' },
 ];
+
+/** Three sections, as a settings page draws them on the server: Billing open, Notifications folded and marked, Danger zone disabled. */
+function ServerSections({ multiple = true }: { multiple?: boolean }): ReactElement {
+  return (
+    <Accordion hasExpandAll={multiple} allowsMultipleExpanded={multiple} defaultExpandedKeys={['billing']}>
+      <AccordionItem id="billing" title="Billing address">
+        <p>12 Rose Lane</p>
+      </AccordionItem>
+      <AccordionItem
+        id="notifications"
+        title="Notifications"
+        note="Email, push and digest settings"
+        isChanged
+      >
+        <p>Email, push and digest</p>
+      </AccordionItem>
+      <AccordionItem id="danger" title="Danger zone" isDisabled>
+        <p>Delete the account</p>
+      </AccordionItem>
+    </Accordion>
+  );
+}
+
+/** An invite field as a sharing form draws it on the server: two addresses, a limit and a hint. */
+function ServerInvite({
+  values = ['ana@example.com', 'bo@example.com'],
+}: {
+  values?: string[];
+}): ReactElement {
+  return (
+    <TagInput
+      label="Invite people"
+      description="Separate addresses with commas or spaces."
+      name="invite"
+      preset={emailPreset}
+      maxValues={10}
+      defaultValue={values}
+    />
+  );
+}
 
 const FACES: [name: string, element: ReactElement][] = [
   [
@@ -496,6 +538,11 @@ const FACES: [name: string, element: ReactElement][] = [
   ],
   ['Repeater empty', <ServerTiers rows={[]} />],
   ['Repeater two entries', <ServerTiers rows={DEFAULT_TIERS.slice(0, 2)} />],
+  // Nothing reads the locale, the zone or the width: the headings, the toggles, the panels and Show all.
+  ['Accordion', <ServerSections />],
+  // Nothing reads the locale: the tags, the hidden inputs, the count and the empty status host.
+  ['TagInput', <ServerInvite />],
+  ['TagInput empty', <ServerInvite values={[]} />],
 ];
 
 describe('the server face', () => {

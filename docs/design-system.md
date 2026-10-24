@@ -875,6 +875,7 @@ panel folded to its header.
 | SegmentedControl's track | pill | 1 + 3px | an option | 20px | 8px | 0 |
 | a field | pill | 6px | its field button | a circle | 6px | 0 |
 | MultiSelect's frame | half a field | 6px | a tag | 18px | 6px | 0 |
+| TagInput's frame, MultiSelect's by selector | half a field | 6px | a tag | 18px | 6px | 0 |
 
 And the controls that move, by the corner inset (below):
 
@@ -3093,6 +3094,14 @@ with forced colors emulated), so the forced-colors block draws it in
 | Folded marker on the card's Lifted ground | Light | Dark |
 | --- | --- | --- |
 | Clay | 6.81 | 6.82 |
+
+The same marker on a folded Accordion item stands on the page's canvas, where
+a collapsible card never does, so from 0.11 that pair is gated at 3:1 too,
+"the folded accordion marker on canvas" (choices plan, Task 1):
+
+| Folded marker on canvas | Light | Dark |
+| --- | --- | --- |
+| Clay | 6.20 | 7.57 |
 
 The dot carries meaning, and on a folded card it is the only thing a sighted
 reader sees of the change, so it is held to the 3:1 that WCAG 1.4.11 asks of
@@ -13579,3 +13588,317 @@ spec's 2 kB budget: Avatar, Tooltip and Menu are most of it. The rule gives a
 detail, the folded trigger's name and tip. Not yet verified on a real iPhone
 and an Android phone at 320px to 430px (the AccountMenu in the drawer with
 its submenu), or in Windows' contrast themes (the open trigger's edge).
+
+## Accordion
+
+Sections that open and fold, each a heading whose button shows or hides a
+panel, on React Aria's `DisclosureGroup` (choices spec, section 5; plan Task
+1). It is new, so its derivation comes before it is built, as the parent spec
+asks.
+
+**Derived from CollapsibleCard, drawn as rows.** An accordion is several
+folds in one list, and CollapsibleCard is the library's one fold, measured in
+three engines, so the accordion takes its fold, its folded marker, its open
+on an invalid field and its find-in-page reveal whole. It does not take the
+card. A column of cards gives every section a frame, a header and actions,
+which is right for a settings page whose sections are cards, and stays the
+pattern there (ruling 5). A list of questions, or the sections of one long
+form, reads as one thing with rules between its parts, the DescriptionList's
+look: rows, a 1px `--color-divider` rule between two items, none above the
+first and none under the last, and no fill, edge or corner of its own. So an
+accordion ends flush at a card's padding, and an app frames one on the page
+with a Card. No row wash either: the row is not a surface, and a wash would
+need a corner in a holder's curve.
+
+**The row** is the Dense data row, `max(var(--size-target),
+var(--size-field))`: 48px, 40px compact, and 44px compact on a coarse
+pointer, above the 40px floor, the whole row the target. Its block padding
+centres one line of the title in it and grows the row when the title wraps.
+The title is at the body step and weight 500 in ink, the toggle's words; a
+long word breaks with `overflow-wrap: break-word`, set on the accordion and
+inherited, never `anywhere`, which would break a word in a holder that sizes
+the accordion by its content (settings plan, spec corrections 46 and 71). The
+accordion keeps its automatic minimum, and its panel's columns are `100%`,
+the panel's width where that is known and its longest word where a holder
+sizes the accordion from its content, so a squeezed flex row or an `auto`
+track stops at the longest word of a title, a note or a panel, never a
+letter; a holder that wants a long word broken inside it gives the accordion
+`min-width: 0`, as the docs examples do (plan, spec correction 22).
+`WordsKeptWhole` proves both in three engines.
+`RowHeights` measures 48px and 40px within a pixel, the first line centred
+and the chevron level with it, in three engines.
+
+**The note** sits a part step under the title, at the small step and 450 in
+slate, outside the toggle so the toggle's name is the title alone, as
+CollapsibleCard's is. It takes back the toggle's end padding and gives it
+again under itself, so a note adds its own line and a part step, no more.
+
+**The chevron** is CollapsibleCard's: 24px, slate, ink on hover where hover
+exists and on a press, level with the title's first line, at the row's end.
+Folded, it turns a quarter toward the title by `--card-chevron-turn`, which
+`card.css` sets from the nearest `dir`: 90deg left to right, -90deg right to
+left. A page that imports the stylesheets one by one imports `card.css` with
+`accordion.css`.
+
+**The fold** is CollapsibleCard's technique in the accordion's own selectors:
+the panel is a grid whose row moves between `1fr` and `0fr` over 200ms
+`ease`, the chevron's turn and the body's end padding moving with it, the
+body clipped only while folded or folding, and nothing moving while the item
+carries `data-instant`. `css.test.js` reads the duration and easing of both
+files' fold rows and fails if they differ, so the two cannot drift. Reduced
+motion stops all three. The body has the Card body's rhythm, 24px between
+peers in one column the panel's width, so fields in a panel take the same
+steps as fields in a card.
+
+**The item's own root.** CollapsibleCard's hooks mark `data-folding` on the
+fold's grandparent and listen there for `beforematch` and `invalid`. Were the
+item React Aria's `Disclosure` itself, that grandparent would be the
+accordion, and one item's fold would mark them all. So each item is
+`div.accordion-item` around the `Disclosure`, which holds the fold, the card's
+own shape, and the item reads its state from `DisclosureGroupStateContext`
+and runs the three hooks unchanged (plan open question 8). In single mode
+one press folds one item and opens another in one commit, and both move
+together (`SingleModeTogether`). A field that fails on submit opens only the
+item of the first field that failed, which is the field the browser focuses.
+
+**Several open by default** (ruling 1), where React Aria's own default is
+one: readers compare sections, and in single mode find-in-page or an invalid
+field would fold the section being read. Either way every item may fold.
+
+**The keys** (ruling 2). Arrow Down and Arrow Up move to the next and the
+previous enabled title of the same accordion, Home and End to the first and
+the last, with no wrap, and never open or fold anything. The handler is on
+the accordion and acts only on its own toggles, found by child combinators
+from its root, so a nested accordion keeps its arrows and a field in a panel
+keeps its own. React Aria's group passes on no key handler, so the
+accordion's element is drawn through the group's `render` with the handler
+on it (plan, spec correction 6).
+
+**Show all sections** (ruling 3), GOV.UK's words and state: a tertiary Button
+at the inline end above the first item, a part step above it. It opens every
+enabled item, then reads "Hide all sections" and folds them; a disabled item
+keeps the state it had (spec correction 8). It carries `aria-expanded` and
+`aria-controls` naming every panel, and keeps focus. The accordion finds its
+items among its children at render, so the server's HTML already holds the
+button's words, state and panels. Items written in a server component reach
+it with React's lazy type for a client part, which it resolves, so they are
+found too (plan, spec correction 20). Each panel's id is the accordion's, given
+to the panel's element through React Aria's `render`, since React Aria keeps
+an id given to a panel only where there is a DOM and a server would write its
+own (spec correction 4).
+
+**The folded marker** is CollapsibleCard's, in the accordion's classes, and
+reads the same: the title, collapsed, then Changed.
+
+**Focus.** An item that folds with focus in its panel gives focus to its
+toggle, CollapsibleCard's rule; `FoldWithFocusInside` finds no focus lost to
+the body in three engines. Show all keeps focus. The ring is the standard
+ring at `--radius-micro`, the title's ring, a text-sized part, which the
+concentric rule allows wherever it binds.
+
+**Printing** (ruling 6). Folded panels print open: under `print` the fold's
+row is `1fr`, the panel is shown over the user agent's rule for
+`hidden="until-found"` (`content-visibility: visible`), nothing transitions,
+and the chevrons and Show all are hidden. The docs' end-to-end run proves it
+in Chromium; WebKit's and Firefox's print previews are not yet verified, and
+an engine that will not show a folded panel prints the page as the screen
+shows it (risk R10).
+
+**Disabled.** A disabled item's title and chevron are taupe, with the
+not-allowed cursor and no hover, and its panel keeps the state it had; a
+disabled accordion disables every toggle and Show all.
+
+**Forced colors.** The rules are drawn in `canvastext`, the chevron takes the
+toggle's color, the marker is `canvastext`, and a disabled title is
+`graytext`; the docs' run reads all three in Chromium.
+
+**Contrast.** Gated already on lifted, in a card: ink 17.84 and 17.42, slate
+5.31 and 6.94, clay 6.81 and 6.82. On the canvas: ink 16.25 and 19.31, slate
+4.84 and 7.26, and clay 6.20 and 7.57, measured with `contrast.js`. Clay on
+canvas is newly gated at 3:1, since the dot carries meaning on the page too.
+A disabled title is taupe, exempt as disabled text.
+
+**Server rendering.** A client part. Every heading and toggle with
+`aria-expanded`, the open panels' content, the folded panels with `hidden=""`
+until hydration (CollapsibleCard's qualification for find-in-page), Show all
+and the marker of an item given `isChanged` are in the server's HTML, the
+same in every locale and zone.
+
+**The size.** `{ Accordion, AccordionItem }` measures 3.1 kB without React
+Aria, Lucide and `@internationalized/date`, 0.1 kB over the spec's 3 kB
+budget, reported as the spec asks: the review's fixes for the first field
+that fails and for items a server component writes added it (plan, spec
+corrections 18, 20 and 21). The rule gives a 4 kB limit. With React Aria not
+ignored it measures 16.49 kB.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): a toggle's name, state and "Changed" in that order, its
+heading level, its note in browse mode, and Show all with its state. Not yet
+verified in Safari's and Firefox's print preview, in Windows' contrast
+themes, or on phones at 320px to 430px.
+
+## TagInput
+
+A field for a list of values typed or pasted: addresses to invite, domains
+to allow, paths to exclude (choices spec, section 6; plan Task 2). Enter or a
+delimiter ends a value, a pasted list is split at once, Backspace in the
+empty box or Enter on a tag takes a value back into the text, and each value
+submits as its own entry. Built on React Aria's `TextField`, which holds the
+box, and its `TagGroup`, which holds the tags.
+
+**One object with MultiSelect** (spec 11 item 9). A tag input and a
+multi-select hold the same thing, a list drawn as tags in a frame, so they
+are drawn by the same rules. Every rule of `multi-select.css` for the frame,
+its focus ring keyed on the box, the box and its placeholders, the tags'
+group and list, the tag, its text, its remove button and that button's
+states, the disabled tag and the forced-colors rules names its TagInput twin
+as one more member of its selector list, the MultiSelect member first. A
+member of a plain list keeps its own weight, so MultiSelect's selectors,
+weights and declarations are exactly what they were, and its baselines stay
+byte-identical. Each twin is a whole selector in TagInput's classes rather
+than an `:is()` pair of classes, so neither part's rule can match the other's
+markup (spec correction 29). `css.test.js` holds MultiSelect's selectors and
+their weights from the file as batch 7 left it, and fails a twin whose weight
+differs from its MultiSelect member's, a MultiSelect selector that went, or a
+list whose TagInput members are not the twins of its MultiSelect ones. The
+`SameAsMultiSelect` play draws both with the same three tags in the three
+shapes and both densities and compares the frames' heights, block and start
+padding, corners, edges and fills, each tag's box, corner, fill, text color
+and weight, and each remove circle's box, hit area and glyph color, in three
+engines. The loading rules, the field button, the Spinner and the changed
+dot's place before the button stay MultiSelect's alone.
+
+**What differs** is in `tag-input.css`. No field button and no Spinner, so the
+frame ends with a text input's own 1.5rem; the box takes `flex: 1 1 8rem`, so
+it wraps to a row of its own once less than 8rem is left beside the last tag,
+and a reader never types into a sliver. Without a label a changed field draws
+the clay dot at the text's end, 24px in, field.css's default place, and the
+box stops a dot and a part step sooner, as a text input does (spec correction
+23). A preset whose box is `dir="ltr"` marks the field `data-ltr`, and each
+tag's text is `direction: ltr; unicode-bidi: isolate`, so an address keeps
+its order on a Persian page while the tags run from the right. The count
+against `maxValues` sits at the label row's end. The polite status host is
+clipped from sight and placed on both lines of the field's grid.
+
+**The corner** is MultiSelect's: the frame a pill while one row and the 24px
+surface step once it wraps; a tag concentric with it, the frame's radius less
+the 6px between them, 18px in Rounded, 6px in Soft, 0 in Square
+("Nested radii, derived"). `TagsInPlace` measures it in every shape and
+density, with the box never narrower than 8rem and a 60-character tag cut at
+12rem.
+
+**The value is always valid** (ruling 8). One pure step, `commitText`, turns
+text into values with the preset: split, cleaned, checked, compared by key,
+and held to the limit. What passes is added in order; a duplicate is dropped
+and said, and the tag it matched stays where it was; what the preset refuses,
+and what the limit leaves out, stays in the box joined by the preset's join,
+in its order. So `value` never holds a value the preset refused, and
+`onChange` is never called with one. Refused text makes the field invalid
+with the preset's error line, which is also the box's custom validity, so the
+form will not submit while it is there; the line goes when the text changes.
+React Aria shows a native field's validation on the box's change event, so
+the field sends one after each refusal, fix and list change, and the line
+follows at once (spec correction 26).
+
+**Typed delimiters wait for clean text** (plan open question 4). A delimiter
+typed into the box adds the candidates before it only when every one passes
+and fits the limit, and otherwise leaves the text exactly as typed, with no
+error, so the space inside "Ana Silva <ana@example.com>" waits for the
+address. Enter, a paste and leaving the field commit everything, and refuse
+with the error line.
+
+**Delimiters are read from the text**, after each change, never from
+`keydown`, since Android keyboards report most keys as `Unidentified`
+(`AndroidInput`). While an input method composes nothing is split, and Enter
+with `isComposing` or `keyCode` 229 is the input method's, so a Persian or
+Chinese word is never cut in half (`Composition`). Enter in an empty box is
+left to the browser, which submits the form. A pasted list is committed
+whole: a text box strips a pasted line break, so the field reads the
+clipboard's text, keeps its breaks, and splits it as it was copied; a paste
+with no delimiter is the browser's and waits in the box (spec correction 25).
+
+**The presets** (ruling 11) are plain objects in a module with no
+`'use client'` and no import, so a server action imports them and checks the
+submitted values with the same rules. The email rule is the HTML standard's
+"valid email address", what `<input type="email">` accepts, with a dot
+required after the `@`: the browser's own rule, so the field agrees with
+every email input on the web, and the dot because an address with no dot in
+its domain is a typo far more often than a real address (spec 11 item 10).
+It refuses an internationalized local part, as the standard does; the docs
+show the spread that extends it (risk R7). Domains take labels in any
+script, a last label not all digits, 253 characters at most and a leading
+`*.`; a pasted URL gives its host. Paths start with a slash, collapse runs of
+slashes and keep their case; a pasted URL gives its path. Each sets the box's
+keyboard, turns capitals, corrections and spelling off, and sets the box
+`dir="ltr"`. A preset holds functions, which a server component cannot pass
+to a client one, so a page renders a tag input with a preset from a client
+component (spec correction 34).
+
+**The take-back** (ruling 13). Backspace in an empty box takes the last tag
+back into the text with the caret at its end; Enter on a tag takes that tag
+back. It differs on purpose from MultiSelect's Backspace, which focuses the
+last tag and removes it only on a second press: there a removed value is
+gone, here it is in the box in plain sight, and Enter, a delimiter or leaving
+the field adds it again. A held Backspace takes back one tag and then deletes
+its letters (`HeldBackspace`).
+
+**Focus never falls to the body** (lessons 10 and 16). When a tag leaves,
+taken back or removed, focus moves in the key's or the press's handler, while
+the tag still holds it, to the box, the next tag, the previous one, or the
+box when none is left; the frame after the commit only repairs focus lost
+all the same and puts the caret at the end (spec correction 31).
+`TakeBackFocus` finds no focus lost to nothing in three engines. Leaving the
+field commits what passes and leaves focus where the reader put it, so an
+address typed before a press on Save is submitted (`BlurBeforeSave`).
+
+**What is said.** A polite status, a sibling of the frame and never inside
+an `aria-busy` element, gathers what happened over `QUIET_MS` and says it
+once, after any focus move: "Added ana@example.com", or "Added 12" for a
+list; "ana@example.com is already added"; "Editing ana@example.com" for a
+take-back; and "Removed ana@example.com" for a removal (spec correction 30).
+Refusals and the limit are in the error line, which describes the box, and
+are not repeated. Each sentence is a new node, so the same words twice are
+said twice.
+
+**The hidden inputs** (ruling 10). With `name`, one hidden input per value,
+in order, and one with an empty value when there are none, MultiSelect's
+shape, in the server's HTML as after it, so `formData.getAll(name)` is the
+list and a form submitted before hydration sends the values already there.
+The box has no name. A form's reset puts back the values of the first render
+and clears the text and the error line. `isRequired` puts the native
+`required` on the box only while the list is empty, so the browser stops an
+empty list and focuses the box while a list with values submits, and
+`aria-required` on it always.
+
+**Text typed before hydration** stays: React leaves the box's text at
+hydration, and the field reads it once, in its first commit, before React's
+first update would put the controlled text back (spec correction 32;
+`TypedBeforeHydration`).
+
+**Contrast** is MultiSelect's, gated: the tag's ink on bone 16.76 and 15.36,
+the remove glyph's slate on bone 4.99 and 6.44. **The remove circle** is
+20px hit at 24px, MultiSelect's record, which meets 2.5.8 with its neighbor
+4px away and stays under the library's 40px floor for the same reason, since
+a 40px hit would cover the next tag.
+
+**Density.** The frame is `--size-field` tall a row and a tag
+`calc(var(--size-field) - 0.75rem)`: 48 and 36px, 36 and 24px compact, 44
+and 32px compact on a coarse pointer.
+
+**Forced colors** are MultiSelect's: a tag's 1px edge and its glyph in
+`canvastext`, a disabled tag `graytext`; and a disabled field's placeholder
+`graytext`.
+
+**The size.** `{ TagInput }` measures 4.15 kB without React Aria, Lucide and
+`@internationalized/date`, 0.15 kB over the spec's 4 kB budget; the rule
+gives a 5 kB limit. With React Aria not ignored it measures 42.06 kB. The
+presets measure 746 B either way, since their module imports nothing; the
+rule gives 1.5 kB (spec correction 36).
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): the label and hint on the box, the tags described after
+it, "Added ana@example.com" after Enter, the error line when text stays, and
+React Aria's English "Press Delete to remove tag." on a tag. Not yet
+verified on a real Android phone with its own keyboard, on an iPhone, with a Persian
+and a Chinese input method, in Windows' contrast themes, or on phones at
+320px to 430px.

@@ -1,5 +1,7 @@
 import { BarChart, LineChart, type BarValue, type LinePoint } from '@snapshot-ui/charts';
 import {
+  Accordion,
+  AccordionItem,
   Badge,
   BottomTabBar,
   BottomTabBarItem,
@@ -13,6 +15,7 @@ import {
   CardNote,
   CardTitle,
   DataTable,
+  emailPreset,
   Eyebrow,
   Heading,
   Kbd,
@@ -21,6 +24,7 @@ import {
   Pagination,
   Prose,
   RouterProvider,
+  TagInput,
   Text,
   UploadList,
   type DataTableColumn,
@@ -98,6 +102,33 @@ const PARTS: [name: string, render: (twin: string) => ReactElement][] = [
   ['Kbd', () => <Kbd>Esc</Kbd>],
   ['Badge', () => <Badge tone="info">Beta</Badge>],
   ['Button', () => <Button>Save</Button>],
+  [
+    'Accordion',
+    () => (
+      <Accordion defaultExpandedKeys={['billing']}>
+        <AccordionItem id="billing" title="Billing address" note="Where invoices go">
+          <p>12 Rose Lane.</p>
+          <ul>
+            <li>Invoices monthly</li>
+          </ul>
+        </AccordionItem>
+        <AccordionItem id="danger" title="Danger zone" isChanged>
+          <p>Close the account.</p>
+        </AccordionItem>
+      </Accordion>
+    ),
+  ],
+  [
+    'TagInput',
+    () => (
+      <TagInput
+        label="Invite people"
+        description="Separate addresses with commas."
+        preset={emailPreset}
+        defaultValue={['ana@example.com', 'bo@example.com']}
+      />
+    ),
+  ],
   [
     'Card',
     () => (

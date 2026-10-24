@@ -15,6 +15,7 @@ import { SearchField } from '../src/search-field';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Select } from '../src/select';
 import { Switch } from '../src/switch';
+import { TagInput, emailPreset } from '../src/tag-input';
 import { TextArea } from '../src/text-area';
 import { TextField } from '../src/text-field';
 
@@ -198,6 +199,25 @@ function MultiSelectForm(): ReactElement {
         <PickerOption id="rent">Rent</PickerOption>
         <PickerOption id="salary">Salary</PickerOption>
       </MultiSelect>
+      <ResetButton />
+    </form>
+  );
+}
+
+function TagInputForm(): ReactElement {
+  const [changed, setChanged] = useState(false);
+  return (
+    <form>
+      <TagInput
+        label="Invite people"
+        name="invite"
+        preset={emailPreset}
+        defaultValue={['ana@example.com', 'bo@example.com']}
+        isChanged={changed}
+        onChange={(value) => {
+          setChanged(value.join() !== 'ana@example.com,bo@example.com');
+        }}
+      />
       <ResetButton />
     </form>
   );
@@ -480,6 +500,28 @@ describe('a native form reset', () => {
     await user.click(screen.getByRole('button', { name: 'Reset' }));
     expect(tags()).toEqual(['Food', 'Rent']);
     expect(sent(container, 'categories')).toEqual(['food', 'rent']);
+    expect(showsChip(container)).toBe(false);
+  });
+
+  it('puts a TagInput back on its first values, with its text and its error cleared, without its chip', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<TagInputForm />);
+    const tags = (): string[] =>
+      [...container.querySelectorAll('.tag-input-tag-text')].map((tag) => tag.textContent);
+    const box = screen.getByRole('textbox');
+    await user.click(screen.getByRole('button', { name: 'Remove ana@example.com' }));
+    await user.type(box, 'cy@example.com,nope{Enter}');
+    expect(tags()).toEqual(['bo@example.com', 'cy@example.com']);
+    expect(sent(container, 'invite')).toEqual(['bo@example.com', 'cy@example.com']);
+    expect(box).toHaveValue('nope');
+    expect(container.querySelector('.field-error')).not.toBeNull();
+    expect(showsChip(container)).toBe(true);
+
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(tags()).toEqual(['ana@example.com', 'bo@example.com']);
+    expect(sent(container, 'invite')).toEqual(['ana@example.com', 'bo@example.com']);
+    expect(box).toHaveValue('');
+    expect(container.querySelector('.field-error')).toBeNull();
     expect(showsChip(container)).toBe(false);
   });
 
