@@ -3094,11 +3094,11 @@ with forced colors emulated), so the forced-colors block draws it in
 | --- | --- | --- |
 | Clay | 6.81 | 6.82 |
 
-The same marker on a folded Accordion item stands on the page's Canvas, where
+The same marker on a folded Accordion item stands on the page's canvas, where
 a collapsible card never does, so from 0.11 that pair is gated at 3:1 too,
 "the folded accordion marker on canvas" (choices plan, Task 1):
 
-| Folded marker on Canvas | Light | Dark |
+| Folded marker on canvas | Light | Dark |
 | --- | --- | --- |
 | Clay | 6.20 | 7.57 |
 

@@ -167,7 +167,7 @@ test.describe('forced colors', () => {
       await folded.locator('.accordion-toggle').evaluate((toggle) => getComputedStyle(toggle).color),
     );
     expect(await chevron.evaluate((icon) => getComputedStyle(icon).color)).not.toBe(
-      await systemColor(page, 'Canvas'),
+      await systemColor(page, 'canvas'),
     );
     expect(await chevron.isVisible()).toBe(true);
   });
