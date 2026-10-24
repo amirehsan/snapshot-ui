@@ -104,9 +104,36 @@ interface AccordionContextValue {
 
 const AccordionContext = createContext<AccordionContextValue | null>(null);
 
+const LAZY = Symbol.for('react.lazy');
+
+/** The shape of React's lazy type, which `lazy()` makes and a server component gives a client part's element. */
+interface LazyType {
+  $$typeof: symbol;
+  _payload: unknown;
+  _init: (payload: unknown) => unknown;
+}
+
 /**
- * The items among `children`, in order: each `AccordionItem` element, inside fragments and arrays too. An item
- * wrapped in an app's own component is not seen here; it still works, and is left out of Show all.
+ * The component an element's type stands for. A server component hands each client part's element to the
+ * client with a lazy type, which resolves to the component once its module has loaded, so an `AccordionItem`
+ * written in a server component is found as well as one written in a client file. A type that has not loaded
+ * yet resolves to nothing.
+ */
+function resolvedType(type: unknown): unknown {
+  if (typeof type !== 'object' || type === null || (type as { $$typeof?: unknown }).$$typeof !== LAZY)
+    return type;
+  const lazy = type as LazyType;
+  try {
+    return lazy._init(lazy._payload);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * The items among `children`, in order: each `AccordionItem` element, inside fragments and arrays too, and from a
+ * server component too. An item wrapped in an app's own component is not seen here; it still works, and is left
+ * out of Show all.
  */
 function knownItems(children: ReactNode): KnownItem[] {
   const found: KnownItem[] = [];
@@ -114,7 +141,7 @@ function knownItems(children: ReactNode): KnownItem[] {
     if (!isValidElement(child)) return;
     if (child.type === Fragment) {
       found.push(...knownItems((child.props as { children?: ReactNode }).children));
-    } else if (child.type === AccordionItem) {
+    } else if (resolvedType(child.type) === AccordionItem) {
       const { id, isDisabled } = child.props as AccordionItemProps;
       found.push({ id, isDisabled: isDisabled === true });
     }

@@ -2994,4 +2994,25 @@ test.describe('the accordion', () => {
     await page.emulateMedia({ media: 'screen' });
     await expect(accordion.locator(':scope > .accordion-item:not([data-expanded])')).toHaveCount(2);
   });
+
+  test('Show all sections finds the items a server component writes, and opens them', async ({ page }) => {
+    await visit(page, '/docs/components/accordion');
+    // The example is a server file, so each item reaches the accordion as a client reference.
+    const accordion = page
+      .locator('.stage .accordion')
+      .filter({ has: page.locator('.accordion-expand-all') });
+    const button = accordion.locator('.accordion-expand-all');
+    const items = accordion.locator(':scope > .accordion-item');
+    await expect(items).toHaveCount(4);
+    const panels = await accordion
+      .locator(':scope > .accordion-item > .accordion-disclosure > .accordion-fold')
+      .evaluateAll((folds) => folds.map((fold) => fold.id));
+    await expect(button).toHaveText('Show all sections');
+    await expect(button).toHaveAttribute('aria-expanded', 'false');
+    await expect(button).toHaveAttribute('aria-controls', panels.join(' '));
+    await button.click();
+    await expect(accordion.locator(':scope > .accordion-item[data-expanded]')).toHaveCount(4);
+    await expect(button).toHaveText('Hide all sections');
+    await expect(button).toHaveAttribute('aria-expanded', 'true');
+  });
 });

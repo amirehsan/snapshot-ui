@@ -243,6 +243,36 @@ describe('Accordion', () => {
     );
   });
 
+  it('finds items a server component passes, whose type is a lazy client reference', () => {
+    // React's server components hand a client component's element to the client with a lazy type that
+    // resolves to the component, never the component itself.
+    const LazyItem = {
+      $$typeof: Symbol.for('react.lazy'),
+      _payload: AccordionItem,
+      _init: (component: unknown) => component,
+    } as unknown as typeof AccordionItem;
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const html = renderToString(
+      <Accordion hasExpandAll>
+        <LazyItem id="billing" title="Billing address">
+          12 Rose Lane
+        </LazyItem>
+        <LazyItem id="notifications" title="Notifications">
+          Email
+        </LazyItem>
+      </Accordion>,
+    );
+    const host = document.createElement('div');
+    host.innerHTML = html;
+    const ids = [...host.querySelectorAll('.accordion-fold')].map((fold) => fold.id);
+    const button = host.querySelector('.accordion-expand-all');
+    expect(button).toHaveTextContent('Show all sections');
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+    expect(button).toHaveAttribute('aria-controls', ids.join(' '));
+    expect(ids.every((id) => id.includes('-panel-'))).toBe(true);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   it('warns once for an item it cannot see among its children while hasExpandAll is on', async () => {
     const user = userEvent.setup();
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);

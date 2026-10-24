@@ -13672,7 +13672,9 @@ enabled item, then reads "Hide all sections" and folds them; a disabled item
 keeps the state it had (spec correction 8). It carries `aria-expanded` and
 `aria-controls` naming every panel, and keeps focus. The accordion finds its
 items among its children at render, so the server's HTML already holds the
-button's words, state and panels. Each panel's id is the accordion's, given
+button's words, state and panels. Items written in a server component reach
+it with React's lazy type for a client part, which it resolves, so they are
+found too (plan, spec correction 20). Each panel's id is the accordion's, given
 to the panel's element through React Aria's `render`, since React Aria keeps
 an id given to a panel only where there is a DOM and a server would write its
 own (spec correction 4).
