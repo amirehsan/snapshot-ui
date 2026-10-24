@@ -218,6 +218,10 @@ import TabsBasic from './tabs-basic';
 import TabsChanged from './tabs-changed';
 import TabsLinks from './tabs-links';
 import TabsOverflow from './tabs-overflow';
+import TagInputBasic from './tag-input-basic';
+import TagInputForm from './tag-input-form';
+import TagInputLimit from './tag-input-limit';
+import TagInputPresets from './tag-input-presets';
 import ThemeSwitchBasic from './theme-switch-basic';
 import ThemeSwitchMenu from './theme-switch-menu';
 import ThemeSwitchRadio from './theme-switch-radio';
@@ -457,6 +461,10 @@ export const examples = {
   'tabs-changed': TabsChanged,
   'tabs-links': TabsLinks,
   'tabs-overflow': TabsOverflow,
+  'tag-input-basic': TagInputBasic,
+  'tag-input-form': TagInputForm,
+  'tag-input-limit': TagInputLimit,
+  'tag-input-presets': TagInputPresets,
   'theme-switch-basic': ThemeSwitchBasic,
   'theme-switch-menu': ThemeSwitchMenu,
   'theme-switch-radio': ThemeSwitchRadio,

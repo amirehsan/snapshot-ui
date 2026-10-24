@@ -1,0 +1,171 @@
+---
+title: Tag input
+description: 'A field for a list of values typed or pasted: addresses to invite, domains to allow, paths to exclude.'
+icon: Tags
+---
+
+<Section>
+
+## TagInput or MultiSelect
+
+Both draw a list of values as removable tags in one frame, and they look the same. Choose by where the values come from.
+
+- When the reader chooses from a list you know, such as categories or teammates, use [MultiSelect](/docs/components/multi-select).
+- When the reader types values nobody listed, such as email addresses to invite, domains to allow or paths to leave out, use a tag input. Nothing pops up: the text box is a plain text box.
+
+</Section>
+
+<Section>
+
+## Typing and pasting
+
+Type a value and press Enter, or end it with a comma or a space, and it becomes a tag. Paste a list, one per line or separated by commas, and it is split at once. A single pasted value stays in the box until Enter.
+
+<Preview name="tag-input-basic" />
+
+- Backspace in the empty box takes the last tag back into the text, with the caret at its end, so a typo is fixed rather than typed again. Holding Backspace takes back one tag and then deletes its letters.
+- Enter on a focused tag takes that tag back into the text, so a value in the middle of the list can be fixed too.
+- Backspace or Delete on a tag, or its X, removes it. Focus moves to the next tag, the previous one if it was last, or the box.
+- When focus leaves the field, text that passes is added, so an address typed just before a press on Save is not lost.
+- Escape clears the text in the box. In a dialog, the first Escape clears the text and the second closes the dialog.
+
+The box ends a value on the delimiters it reads in the text after each change, not on the key that was pressed, since Android keyboards report most keys without a name. While an input method composes, as a Persian or Chinese keyboard does, nothing is split, so a word is never cut in half. Enter in an empty box submits the form, as it does from any text field.
+
+</Section>
+
+<Section>
+
+## Presets
+
+A preset says how text becomes values: how a paste is split, how each value is cleaned, which values pass and which two are the same. Pass `emailPreset`, `domainPreset` or `pathPreset`. Without one, the field splits on commas and new lines and accepts any text.
+
+<Preview name="tag-input-presets" />
+
+### Emails
+
+`emailPreset` splits on commas, semicolons, new lines and spaces, and takes the address out of `Ana Silva <ana@example.com>`. It drops a `mailto:` and lowercases the part after the `@`. An address passes when `<input type="email">` would accept it and its domain has a dot, so `ana@localhost` stays in the box. Two addresses are the same whatever their case. The error line reads "Enter email addresses in the correct format, like name@example.com".
+
+### Domains
+
+`domainPreset` splits on commas, semicolons and white space. A pasted address keeps only its host: `https://Example.com:8080/pricing` becomes `example.com`. A domain passes with two or more labels of letters, digits and inner hyphens, in any script, a last label that is not all digits, and 253 characters at most; `*.example.com` stands for every subdomain. The error line reads "Enter domains like example.com".
+
+### Paths
+
+`pathPreset` splits on commas and white space. A pasted address keeps only its path, and the leading slash is added, so `blog` becomes `/blog`. Runs of slashes collapse and a trailing slash goes, except on `/`. A path passes when it starts with a slash and holds no white space and no `#`; `*` is a wildcard. Two paths that differ in case are different paths, as servers treat them. The error line reads "Enter paths that start with a slash, like /blog".
+
+### Checking again on the server
+
+A preset is a courtesy for the reader: check the values again where they arrive. The presets have no `'use client'` and import nothing from React, so a server action imports them and checks each value with the same rules.
+
+```ts
+'use server';
+
+import { emailPreset } from '@snapshot-ui/react';
+
+export async function invite(formData: FormData) {
+  const invites = formData
+    .getAll('invite')
+    .map(String)
+    .filter((value) => emailPreset.isValid(emailPreset.normalize(value)));
+  // ...
+}
+```
+
+A preset is a plain object, so extend one with a spread. The email rule refuses an address the standard does not allow, such as one with letters outside ASCII before the `@`; where your mail system accepts those, pass your own check:
+
+```ts
+const internationalEmail = { ...emailPreset, isValid: (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(value) };
+```
+
+A preset holds functions, which a server component cannot pass to a client one, so render a tag input with a preset from a client component, as the examples here do.
+
+</Section>
+
+<Section>
+
+## A limit
+
+`maxValues` sets the most values. The count shows in the label row, "3/5". Past the limit nothing more is added: the rest stays in the box and the error line says "You can add up to 5". Typing is never blocked.
+
+<Preview name="tag-input-limit" />
+
+</Section>
+
+<Section>
+
+## In a form
+
+With `name`, each value submits as its own entry, in order, so `formData.getAll('invite')` is the list. With no values, the field sends one empty entry under its name, as a multi-select does, so a server can tell a list the reader emptied from a field that is not on the form. The text box itself has no name: text that is not a tag is never sent.
+
+<Preview name="tag-input-form" />
+
+- The value only ever holds values the preset accepts. Text it refuses stays in the box with the error line, and the form will not submit while it is there.
+- A value already in the list is dropped, and the field says so.
+- A form's reset puts back the values the field started with, and clears the text and the error line.
+- `isRequired` asks for at least one value. The browser stops a submit with an empty list and focuses the box; a list with values submits.
+- The tags and their entries are in the server's HTML, so a form submitted before the page hydrates sends the values already there.
+
+</Section>
+
+<Section>
+
+## Usage
+
+Uncontrolled, pass `defaultValue`. Controlled, pass `value` and `onChange`, which receives a new list after every add, removal and take-back, and never a value the preset refused. The text being typed is `inputValue` and `onInputChange`, React Aria's names.
+
+```tsx
+'use client';
+
+import { TagInput, emailPreset } from '@snapshot-ui/react';
+import { useState } from 'react';
+
+export function Invites() {
+  const [invites, setInvites] = useState<string[]>([]);
+  return <TagInput label="Invite people" preset={emailPreset} value={invites} onChange={setInvites} />;
+}
+```
+
+On a Persian page, pass `formatCount` to write counts in Persian digits, `labels` for the field's own words, and the preset's words by a spread: `{ ...emailPreset, invalidMessage: () => 'نشانی‌ها را درست وارد کنید' }`. The addresses, domains and paths stay left to right inside their tags, while the tags run from the right.
+
+The field says what it added in a polite status of its own. Do not mark the field or a container around it `aria-busy`, which may hold that status back.
+
+</Section>
+
+<Section>
+
+## Props
+
+`className` and `ref` go on the field's root; `inputRef` on the text box. `className` is merged after the library's classes.
+
+<PropsTable label="TagInput props" path="../../packages/react/src/tag-input/TagInput.tsx" type="Pick<TagInputBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'placeholder' | 'preset' | 'value' | 'defaultValue' | 'onChange' | 'inputValue' | 'defaultInputValue' | 'onInputChange' | 'maxValues' | 'commitsOnBlur' | 'validate' | 'formatCount' | 'labels' | 'isChanged' | 'changedLabel' | 'name' | 'form' | 'isRequired' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'validationBehavior' | 'className'>" />
+
+<PropsTable label="TagInputLabels" path="../../packages/react/src/tag-input/TagInput.tsx" type="TagInputLabels" />
+
+<PropsTable label="TagInputPreset" path="../../packages/react/src/tag-input/presets.ts" type="TagInputPreset" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The text box is a `textbox`, not a `combobox`, since nothing pops up. Its label and hint are read on it, then its error line, then the tags. The tags are React Aria's tag group, a `grid` named "Added" and the field's label, one tab stop before the box with the arrow keys between tags, as a multi-select's are. Each remove button is named by its tag: "Remove ana@example.com".
+
+<Keys rows={[['Tab Shift+Tab', 'To the tags, one stop, then the text box, then on to the next field.'], ['Enter', 'In the box with text, adds it. In an empty box, submits the form. On a tag, takes it back into the box.'], ['Comma Space', 'With the email and domain presets, ends a value as it is typed; a semicolon too. The path preset ends one on a comma or a space.'], ['Backspace', 'In an empty box, takes the last tag back into the box. On a tag, removes it.'], ['Delete', 'On a tag, removes it.'], ['Left Right', 'Between tags, in the drawn direction.'], ['Escape', 'In the box with text, clears the text.'], ['Ctrl+V Cmd+V', 'Pastes; a list is split at once.']]} />
+
+- After Enter or a paste, a polite status says "Added ana@example.com", or "Added 12" for a list, once typing pauses. It says when a value was already there, when a tag comes back into the box to edit, and when one is removed. Refused text and the limit are in the error line, which the box names, and the status does not repeat them.
+- When a tag leaves, focus moves to the next tag, the previous one, or the box, before the tag goes, so it never falls to the page.
+- React Aria tells a screen reader "Press Delete to remove tag." on a focused tag, in English, since its words have no Persian.
+- What VoiceOver and NVDA say for each of these is not yet verified.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps tag inputs in the system.
+
+<Rules dos={['Say in the hint which characters end a value.', 'Use a preset for addresses, domains and paths, so the keyboard and the checks fit.', 'Check the values again on the server, with the same preset.']} donts={['Never put an invalid value in the list. Leave it in the box with the error line.', 'Never use a tag input where a known list exists. Use a multi-select.', 'Never mark the field aria-busy around its status.']} />
+
+</Section>

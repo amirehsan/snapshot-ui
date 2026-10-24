@@ -44,6 +44,100 @@ const MOVING_PARTS = [
 
 const INK_RING = /(?<![\w-])outline(?:-color)?\s*:[^;{}]*var\(\s*--color-ink\s*[,)]/i;
 
+/** A selector list split at its top-level commas, each member trimmed. */
+function selectorMembers(list) {
+  const members = [];
+  let depth = 0;
+  let start = 0;
+  for (let at = 0; at < list.length; at += 1) {
+    const char = list[at];
+    if (char === '(') depth += 1;
+    else if (char === ')') depth -= 1;
+    else if (char === ',' && depth === 0) {
+      members.push(list.slice(start, at).trim());
+      start = at + 1;
+    }
+  }
+  members.push(list.slice(start).trim());
+  return members;
+}
+
+/**
+ * A selector's weight as [ids, classes, types], by Selectors Level 4: `:where()` weighs nothing, and `:is()`,
+ * `:not()` and `:has()` weigh their heaviest member. Enough for the library's own selectors.
+ */
+/**
+ * @param {string} selector
+ * @returns {[number, number, number]}
+ */
+function weightOf(selector) {
+  let ids = 0;
+  let classes = 0;
+  let types = 0;
+  /** @type {(a: [number, number, number], b: [number, number, number]) => boolean} */
+  const heavier = (a, b) => (a[0] - b[0] || a[1] - b[1] || a[2] - b[2]) > 0;
+  const word = (/** @type {number} */ from) => {
+    let end = from;
+    while (end < selector.length && /[\w-]/.test(selector.charAt(end))) end += 1;
+    return end;
+  };
+  let at = 0;
+  while (at < selector.length) {
+    const char = selector.charAt(at);
+    if (char === '#' || char === '.') {
+      if (char === '#') ids += 1;
+      else classes += 1;
+      at = word(at + 1);
+    } else if (char === '[') {
+      classes += 1;
+      at = selector.indexOf(']', at) + 1;
+    } else if (char === ':' && selector.charAt(at + 1) === ':') {
+      types += 1;
+      at = word(at + 2);
+    } else if (char === ':') {
+      const end = word(at + 1);
+      const name = selector.slice(at + 1, end);
+      at = end;
+      if (selector.charAt(at) !== '(') {
+        classes += 1;
+        continue;
+      }
+      let depth = 1;
+      let close = at + 1;
+      while (depth > 0) {
+        if (selector.charAt(close) === '(') depth += 1;
+        else if (selector.charAt(close) === ')') depth -= 1;
+        close += 1;
+      }
+      const inner = selector.slice(at + 1, close - 1);
+      at = close;
+      if (name === 'where') continue;
+      if (['is', 'not', 'has'].includes(name)) {
+        /** @type {[number, number, number]} */
+        const none = [0, 0, 0];
+        const most = selectorMembers(inner)
+          .map(weightOf)
+          .reduce((top, each) => (heavier(each, top) ? each : top), none);
+        ids += most[0];
+        classes += most[1];
+        types += most[2];
+      } else classes += 1;
+    } else if (/[a-z]/i.test(char)) {
+      types += 1;
+      at = word(at);
+    } else at += 1;
+  }
+  return [ids, classes, types];
+}
+
+/** CSS whose rules name TagInput's twins, with every member that names a tag-input class taken out. */
+const withoutTagInput = (css) =>
+  css.replace(/([^{}]+)\{/g, (whole, header) => {
+    if (header.trim().startsWith('@') || !header.includes('tag-input')) return whole;
+    const kept = selectorMembers(header).filter((member) => !member.includes('tag-input'));
+    return `${header.match(/^\s*/)[0]}${kept.join(', ')} {`;
+  });
+
 /** The text between the braces that follow `header`, nested blocks included. */
 function blockAfter(css, header) {
   const start = css.indexOf(header);
@@ -6616,8 +6710,9 @@ describe('src/components/combo-box.css', () => {
 });
 
 describe('src/components/multi-select.css', () => {
-  // The rules without their comments, with their whitespace closed up.
-  const rules = () => closeUp(stripComments(read('src/components/multi-select.css')));
+  // The rules without their comments, with their whitespace closed up, and without TagInput's twins, so each
+  // rule reads as MultiSelect wrote it (choices plan, Task 2).
+  const rules = () => withoutTagInput(closeUp(stripComments(read('src/components/multi-select.css'))));
   /** Every selector the file writes, each part of a list on its own. */
   const selectors = () =>
     [...rules().matchAll(/([^{}]+)\{/g)]
@@ -6789,6 +6884,172 @@ describe('src/components/multi-select.css', () => {
     expect(css).not.toMatch(/(?<![\w-])(left|right)\s*:|padding-(left|right)|margin-(left|right)/);
     expect(css).not.toContain('scale');
     expect(css).not.toContain('rtl');
+  });
+});
+
+/**
+ * MultiSelect's selectors and their weights, written from multi-select.css as batch 7 left it, before TagInput's
+ * twins joined its lists (choices plan, Task 2, Step 0). The forced-colors rules repeat three selectors.
+ */
+/** @type {[string, [number, number, number]][]} */
+const MULTI_SELECT_WEIGHTS = [
+  ['.multi-select-control', [0, 1, 0]],
+  ['.multi-select[data-loading] .multi-select-control', [0, 3, 0]],
+  ['.multi-select[data-changed][data-unlabelled]', [0, 3, 0]],
+  ['.multi-select[data-changed][data-unlabelled][data-loading]', [0, 4, 0]],
+  ['.multi-select[data-changed][data-unlabelled] .multi-select-control', [0, 4, 0]],
+  ['.multi-select[data-changed][data-unlabelled][data-loading] .multi-select-control', [0, 5, 0]],
+  [
+    '.multi-select-control.input:where(:has(.multi-select-input:is(:focus-visible, [data-focus-visible])))',
+    [0, 2, 0],
+  ],
+  ['.multi-select-control :is(.input-button, .combo-box-spinner)', [0, 2, 0]],
+  ['.multi-select-control .combo-box-spinner', [0, 2, 0]],
+  ['.multi-select-value', [0, 1, 0]],
+  ['.multi-select-tags', [0, 1, 0]],
+  ['.multi-select-tag-list', [0, 1, 0]],
+  ['.multi-select-input', [0, 1, 0]],
+  ['.multi-select-input::placeholder', [0, 1, 1]],
+  ['.multi-select[data-unlabelled]:not([data-disabled]) .multi-select-input::placeholder', [0, 4, 1]],
+  ['.multi-select-tag', [0, 1, 0]],
+  ['.multi-select-tag[data-focus-visible]', [0, 2, 0]],
+  ['.multi-select-tag-text', [0, 1, 0]],
+  ['.multi-select-tag-remove', [0, 1, 0]],
+  ['.multi-select-tag-remove::before', [0, 1, 1]],
+  ['.multi-select-tag-remove svg', [0, 1, 1]],
+  ['.multi-select-tag-remove:is(:hover, [data-hovered])', [0, 2, 0]],
+  ['.multi-select-tag-remove:is(:active, [data-pressed])', [0, 2, 0]],
+  ['.multi-select-tag-remove[data-focus-visible]', [0, 2, 0]],
+  ['.multi-select[data-disabled] .multi-select-tag', [0, 3, 0]],
+  ['.multi-select-tag', [0, 1, 0]],
+  ['.multi-select-tag-remove', [0, 1, 0]],
+  ['.multi-select[data-disabled] .multi-select-tag', [0, 3, 0]],
+];
+
+describe('src/components/tag-input.css and the shared rules', () => {
+  const shared = () => closeUp(stripComments(read('src/components/multi-select.css')));
+  const rules = () => closeUp(stripComments(read('src/components/tag-input.css')));
+  /** Every rule header of the shared file, as its list of members. */
+  const lists = () =>
+    [...shared().matchAll(/([^{}]+)\{/g)]
+      .map((match) => match[1].trim())
+      .filter((header) => !header.startsWith('@'))
+      .map(selectorMembers);
+  /** A MultiSelect member's TagInput twin: the same selector in TagInput's classes. */
+  const twinOf = (member) => member.replaceAll('multi-select', 'tag-input');
+
+  it('computes weights as Selectors Level 4 does', () => {
+    expect(weightOf('.a')).toEqual([0, 1, 0]);
+    expect(weightOf('.a:where(:has(.b:is(:focus, [x])))')).toEqual([0, 1, 0]);
+    expect(weightOf(':is(.a, .b)[x] :is(.c, #d)')).toEqual([1, 2, 0]);
+    expect(weightOf('.a::placeholder')).toEqual([0, 1, 1]);
+    expect(weightOf('.a:not([x]) svg')).toEqual([0, 2, 1]);
+  });
+
+  it('keeps the weight of every MultiSelect rule it twins', () => {
+    const table = new Map(MULTI_SELECT_WEIGHTS.map(([selector, weight]) => [selector, weight]));
+    const written = lists().flat();
+    // Every MultiSelect selector is still written, with the weight it had.
+    for (const [selector, weight] of MULTI_SELECT_WEIGHTS) {
+      expect(written, selector).toContain(selector);
+      expect(weightOf(selector), selector).toEqual(weight);
+    }
+    // Every list naming a tag-input class is a MultiSelect rule of the table with its twins beside it, each twin
+    // at its MultiSelect member's weight.
+    const twinned = lists().filter((members) => members.some((member) => member.includes('tag-input')));
+    expect(twinned.length).toBeGreaterThan(15);
+    for (const members of twinned) {
+      const own = members.filter((member) => !member.includes('tag-input'));
+      expect(own.length, members.join(', ')).toBeGreaterThan(0);
+      for (const member of own) expect(table.has(member), member).toBe(true);
+      for (const member of members.filter((each) => each.includes('tag-input'))) {
+        const original = member.replaceAll('tag-input', 'multi-select');
+        expect(table.get(original), member).toEqual(weightOf(member));
+      }
+    }
+  });
+
+  it('twins no loading, field button, spinner or changed dot rule', () => {
+    for (const members of lists()) {
+      const header = members.join(', ');
+      if (!/data-loading|input-button|combo-box-spinner|\[data-changed\]\[data-unlabelled\]/.test(header))
+        continue;
+      expect(header).not.toContain('tag-input');
+    }
+  });
+
+  it('pairs every multi-select class with its tag-input twin in each shared list', () => {
+    for (const members of lists()) {
+      if (!members.some((member) => member.includes('tag-input'))) continue;
+      // The value is ComboBoxValue's element, which TagInput has not; every other member has its twin.
+      const own = members.filter(
+        (member) => !member.includes('tag-input') && member !== '.multi-select-value',
+      );
+      const twins = members.filter((member) => member.includes('tag-input'));
+      expect(twins, members.join(', ')).toEqual(own.map(twinOf));
+      // The multi-select member comes first, so the rule reads as MultiSelect's with TagInput beside it.
+      expect(members[0]).toContain('multi-select');
+    }
+  });
+
+  it('gives the box flex 1 1 8rem and the frame a text input end padding', () => {
+    const css = rules();
+    expect(blockAfter(css, '.tag-input-input {').trim()).toBe('flex: 1 1 8rem;');
+    expect(blockAfter(css, '.tag-input-control {').trim()).toBe('padding-inline-end: 1.5rem;');
+    // The tags are MultiSelect's, concentric with the frame: its corner less the 6px between them.
+    expect(blockAfter(shared(), '.multi-select-tag, .tag-input-tag {')).toContain(
+      'border-radius: max(0px, calc(var(--input-radius) - 0.375rem));',
+    );
+  });
+
+  it('pads an unlabelled changed frame clear of the dot at the text end, as a text input', () => {
+    expect(blockAfter(rules(), '.tag-input[data-changed][data-unlabelled] .tag-input-control {').trim()).toBe(
+      'padding-inline-end: calc(1.5rem + 0.375rem + var(--spacing-part));',
+    );
+    // The dot keeps field.css's default place, 24px in: TagInput sets no --field-changed-mark-end.
+    expect(rules()).not.toContain('--field-changed-mark-end');
+  });
+
+  it('writes a left-to-right preset tag text left to right and isolated', () => {
+    const text = blockAfter(rules(), '.tag-input[data-ltr] .tag-input-tag-text {');
+    expect(text).toContain('direction: ltr;');
+    expect(text).toContain('unicode-bidi: isolate;');
+  });
+
+  it('breaks a word only when it alone is wider than its line', () => {
+    expect(blockAfter(rules(), '.tag-input {').trim()).toBe('overflow-wrap: break-word;');
+    expect(rules()).not.toContain('anywhere');
+  });
+
+  it('puts the count at the label row end and keeps the status host out of sight on both lines', () => {
+    const css = rules();
+    expect(blockAfter(css, '.tag-input .field-head > .field-counter {').trim()).toBe(
+      'margin-inline-start: auto;',
+    );
+    const status = blockAfter(css, '.tag-input-status {');
+    for (const declaration of [
+      'grid-area: 1 / 1 / span 1 / span 1;',
+      'position: absolute;',
+      'inline-size: 1px;',
+      'block-size: 1px;',
+      'overflow: hidden;',
+      'clip-path: inset(50%);',
+    ]) {
+      expect(status, declaration).toContain(declaration);
+    }
+  });
+
+  it('draws a forced-colors block', () => {
+    const forced = blockAfter(rules(), FORCED_COLORS);
+    expect(forced).toContain('color: graytext;');
+    // The tag's edge and glyph are the shared rules' own forced colors.
+    expect(blockAfter(shared(), FORCED_COLORS)).toContain('.multi-select-tag, .tag-input-tag {');
+  });
+
+  it('uses logical properties only', () => {
+    expect(rules()).not.toMatch(
+      /(?<![\w-])(left|right|width|height)\s*:|padding-(left|right)|margin-(left|right)/,
+    );
   });
 });
 

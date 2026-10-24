@@ -2410,3 +2410,29 @@ describe('the accordion', () => {
     expect(contrastFailures(paletteFor(tokens, 'dark'), 'dark')).toEqual([]);
   });
 });
+
+describe('the tag input', () => {
+  /** A token color painted over `groundName` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // A tag is MultiSelect's bone pill, drawn by the same rules: its text ink and its remove glyph slate, a graphic
+  // that needs 3:1 and has the text minimum. The gate holds both, so the tag input adds no pair.
+  it('cites the tag ink and the remove glyph slate on bone, MultiSelect pairs', () => {
+    for (const text of ['ink', 'slate']) {
+      expect(CONTRAST_PAIRS, `${text} on bone`).toContainEqual(
+        expect.objectContaining({ text, ground: 'bone', minimum: TEXT }),
+      );
+    }
+    for (const { name, light, dark } of [
+      { name: 'ink', light: 16.76, dark: 15.36 },
+      { name: 'slate', light: 4.99, dark: 6.44 },
+    ]) {
+      expect(measured('light', name, 'bone'), `${name} on bone, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, 'bone'), `${name} on bone, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+});

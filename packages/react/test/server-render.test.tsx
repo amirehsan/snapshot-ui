@@ -17,6 +17,7 @@ import { DatePicker } from '../src/date-picker';
 import { DateRangePicker } from '../src/date-range-picker';
 import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
 import { Accordion, AccordionItem } from '../src/accordion';
+import { TagInput, emailPreset } from '../src/tag-input';
 import { CollapsibleCard } from '../src/collapsible-card';
 import { ComboBox } from '../src/combo-box';
 import { CommandPalette } from '../src/command-palette';
@@ -123,6 +124,24 @@ function ServerSections({ multiple = true }: { multiple?: boolean }): ReactEleme
         <p>Delete the account</p>
       </AccordionItem>
     </Accordion>
+  );
+}
+
+/** An invite field as a sharing form draws it on the server: two addresses, a limit and a hint. */
+function ServerInvite({
+  values = ['ana@example.com', 'bo@example.com'],
+}: {
+  values?: string[];
+}): ReactElement {
+  return (
+    <TagInput
+      label="Invite people"
+      description="Separate addresses with commas or spaces."
+      name="invite"
+      preset={emailPreset}
+      maxValues={10}
+      defaultValue={values}
+    />
   );
 }
 
@@ -442,6 +461,32 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'Show all sections',
     ],
     ['data-folding'],
+  ],
+  [
+    // The label with its count, a tag per value, a hidden input per value, the box with no name, and the empty
+    // status host: a form submitted before hydration sends the values already there.
+    'TagInput',
+    <ServerInvite />,
+    [
+      'class="field tag-input"',
+      'data-ltr=""',
+      '<span role="status" class="field-counter">2/10</span>',
+      'class="input tag-input-control"',
+      '<span class="tag-input-tag-text" dir="ltr">ana@example.com</span>',
+      '<span class="tag-input-tag-text" dir="ltr">bo@example.com</span>',
+      '<input type="hidden" name="invite" value="ana@example.com"/>',
+      '<input type="hidden" name="invite" value="bo@example.com"/>',
+      'class="tag-input-input"',
+      'Separate addresses with commas or spaces.',
+      '<div class="tag-input-status" role="status" aria-live="polite"></div>',
+    ],
+    ['name="invite" class', 'data-invalid'],
+  ],
+  [
+    'TagInput, empty',
+    <ServerInvite values={[]} />,
+    ['<input type="hidden" name="invite" value=""/>', 'class="tag-input-input"'],
+    ['tag-input-tag', 'role="grid"'],
   ],
   [
     'CollapsibleCard',

@@ -7,11 +7,17 @@
  * focused tag, which rings itself. A tag is a pill a field step smaller than the field, its label at 500 on
  * bone, its remove button a 20px circle hit at 24px inside the tag's own padding. The placeholder is taupe
  * under a visible label and slate without one.
+ *
+ * TagInput draws the same frame and tags (spec 11 item 9): each rule of the frame, the box and the tags names its
+ * TagInput twin as one more member of its selector list, the multi-select member first, so every member keeps its
+ * own weight and MultiSelect draws exactly what it drew. The loading rules, the field button, the Spinner and the
+ * changed dot's place, which TagInput has not, stay MultiSelect's alone; tag-input.css holds what differs.
  */
 @layer components {
   /* One class, after input.css, so it beats the input's box and none of its states. Its corner is the field's,
      capped at half a field so it holds when the frame wraps, and the tags and the field button read it. */
-  .multi-select-control {
+  .multi-select-control,
+  .tag-input-control {
     --input-radius: min(var(--radius-pill), calc(var(--size-field) / 2));
 
     position: relative;
@@ -51,7 +57,8 @@
 
   /* Two classes with the test in :where(): it beats the hover edge by order, and the changed and invalid
      edges, three classes, still beat it. */
-  .multi-select-control.input:where(:has(.multi-select-input:is(:focus-visible, [data-focus-visible]))) {
+  .multi-select-control.input:where(:has(.multi-select-input:is(:focus-visible, [data-focus-visible]))),
+  .tag-input-control.input:where(:has(.tag-input-input:is(:focus-visible, [data-focus-visible]))) {
     border: 1.5px solid var(--color-ink);
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);
@@ -80,11 +87,13 @@
   /* The value and the group have no role of their own, so they leave the box tree and their tags flow in
      the frame. The list keeps its box: an element with a role is never display: contents. */
   .multi-select-value,
-  .multi-select-tags {
+  .multi-select-tags,
+  .tag-input-tags {
     display: contents;
   }
 
-  .multi-select-tag-list {
+  .multi-select-tag-list,
+  .tag-input-tag-list {
     display: flex;
     flex-wrap: wrap;
     gap: 0.25rem;
@@ -93,7 +102,8 @@
     outline: none;
   }
 
-  .multi-select-input {
+  .multi-select-input,
+  .tag-input-input {
     box-sizing: border-box;
     flex: 1 1 4rem;
     min-width: 4rem;
@@ -108,20 +118,23 @@
     outline: none;
   }
 
-  .multi-select-input::placeholder {
+  .multi-select-input::placeholder,
+  .tag-input-input::placeholder {
     color: var(--color-taupe);
     opacity: 1;
   }
 
   /* Slate where no visible label names the field, as SearchField's: the placeholder is then all that says
      what the field is for. Taupe again while disabled. */
-  .multi-select[data-unlabelled]:not([data-disabled]) .multi-select-input::placeholder {
+  .multi-select[data-unlabelled]:not([data-disabled]) .multi-select-input::placeholder,
+  .tag-input[data-unlabelled]:not([data-disabled]) .tag-input-input::placeholder {
     color: var(--color-slate);
   }
 
   /* A tag sits 6px inside the frame, its padding and its firmest edge, so it is concentric with the frame: a
      pill in Rounded, 6px in Soft. Its remove button is a circle, which keeps its shape. */
-  .multi-select-tag {
+  .multi-select-tag,
+  .tag-input-tag {
     box-sizing: border-box;
     display: inline-flex;
     align-items: center;
@@ -140,12 +153,14 @@
     outline: none;
   }
 
-  .multi-select-tag[data-focus-visible] {
+  .multi-select-tag[data-focus-visible],
+  .tag-input-tag[data-focus-visible] {
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);
   }
 
-  .multi-select-tag-text {
+  .multi-select-tag-text,
+  .tag-input-tag-text {
     min-width: 0;
     max-width: 12rem;
     overflow: hidden;
@@ -153,7 +168,8 @@
     white-space: nowrap;
   }
 
-  .multi-select-tag-remove {
+  .multi-select-tag-remove,
+  .tag-input-tag-remove {
     position: relative;
     box-sizing: border-box;
     display: inline-grid;
@@ -171,48 +187,57 @@
   }
 
   /* Hit at 24px, inside the tag's own padding, so it never covers a neighbor 4px away. */
-  .multi-select-tag-remove::before {
+  .multi-select-tag-remove::before,
+  .tag-input-tag-remove::before {
     content: '';
     position: absolute;
     inset: -0.125rem;
   }
 
-  .multi-select-tag-remove svg {
+  .multi-select-tag-remove svg,
+  .tag-input-tag-remove svg {
     width: 12px;
     height: 12px;
   }
 
   @media (hover: hover) {
-    .multi-select-tag-remove:is(:hover, [data-hovered]) {
+    .multi-select-tag-remove:is(:hover, [data-hovered]),
+    .tag-input-tag-remove:is(:hover, [data-hovered]) {
       background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
       color: var(--color-ink);
     }
   }
 
-  .multi-select-tag-remove:is(:active, [data-pressed]) {
+  .multi-select-tag-remove:is(:active, [data-pressed]),
+  .tag-input-tag-remove:is(:active, [data-pressed]) {
     background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
     color: var(--color-ink);
   }
 
-  .multi-select-tag-remove[data-focus-visible] {
+  .multi-select-tag-remove[data-focus-visible],
+  .tag-input-tag-remove[data-focus-visible] {
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);
   }
 
-  .multi-select[data-disabled] .multi-select-tag {
+  .multi-select[data-disabled] .multi-select-tag,
+  .tag-input[data-disabled] .tag-input-tag {
     color: var(--color-taupe);
   }
 
   @media (forced-colors: active) {
-    .multi-select-tag {
+    .multi-select-tag,
+    .tag-input-tag {
       border-color: CanvasText;
     }
 
-    .multi-select-tag-remove {
+    .multi-select-tag-remove,
+    .tag-input-tag-remove {
       color: CanvasText;
     }
 
-    .multi-select[data-disabled] .multi-select-tag {
+    .multi-select[data-disabled] .multi-select-tag,
+    .tag-input[data-disabled] .tag-input-tag {
       color: GrayText;
       border-color: GrayText;
     }

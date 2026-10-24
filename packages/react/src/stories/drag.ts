@@ -17,10 +17,10 @@ export function filesTransfer(files: readonly File[]): DataTransfer {
   return data;
 }
 
-/** A transfer holding text only, as a drag of a link, a selection or a row does. */
-export function textTransfer(): DataTransfer {
+/** A transfer holding text only, as a drag of a link, a selection or a row does, or a copied list pasted. */
+export function textTransfer(text = 'Not a file'): DataTransfer {
   const data = new DataTransfer();
-  data.setData('text/plain', 'Not a file');
+  data.setData('text/plain', text);
   allowAll(data);
   return data;
 }

@@ -875,6 +875,7 @@ panel folded to its header.
 | SegmentedControl's track | pill | 1 + 3px | an option | 20px | 8px | 0 |
 | a field | pill | 6px | its field button | a circle | 6px | 0 |
 | MultiSelect's frame | half a field | 6px | a tag | 18px | 6px | 0 |
+| TagInput's frame, MultiSelect's by selector | half a field | 6px | a tag | 18px | 6px | 0 |
 
 And the controls that move, by the corner inset (below):
 
@@ -13735,3 +13736,169 @@ ignored it measures 16.49 kB.
 heading level, its note in browse mode, and Show all with its state. Not yet
 verified in Safari's and Firefox's print preview, in Windows' contrast
 themes, or on phones at 320px to 430px.
+
+## TagInput
+
+A field for a list of values typed or pasted: addresses to invite, domains
+to allow, paths to exclude (choices spec, section 6; plan Task 2). Enter or a
+delimiter ends a value, a pasted list is split at once, Backspace in the
+empty box or Enter on a tag takes a value back into the text, and each value
+submits as its own entry. Built on React Aria's `TextField`, which holds the
+box, and its `TagGroup`, which holds the tags.
+
+**One object with MultiSelect** (spec 11 item 9). A tag input and a
+multi-select hold the same thing, a list drawn as tags in a frame, so they
+are drawn by the same rules. Every rule of `multi-select.css` for the frame,
+its focus ring keyed on the box, the box and its placeholders, the tags'
+group and list, the tag, its text, its remove button and that button's
+states, the disabled tag and the forced-colors rules names its TagInput twin
+as one more member of its selector list, the MultiSelect member first. A
+member of a plain list keeps its own weight, so MultiSelect's selectors,
+weights and declarations are exactly what they were, and its baselines stay
+byte-identical. Each twin is a whole selector in TagInput's classes rather
+than an `:is()` pair of classes, so neither part's rule can match the other's
+markup (spec correction 29). `css.test.js` holds MultiSelect's selectors and
+their weights from the file as batch 7 left it, and fails a twin whose weight
+differs from its MultiSelect member's, a MultiSelect selector that went, or a
+list whose TagInput members are not the twins of its MultiSelect ones. The
+`SameAsMultiSelect` play draws both with the same three tags in the three
+shapes and both densities and compares the frames' heights, block and start
+padding, corners, edges and fills, each tag's box, corner, fill, text color
+and weight, and each remove circle's box, hit area and glyph color, in three
+engines. The loading rules, the field button, the Spinner and the changed
+dot's place before the button stay MultiSelect's alone.
+
+**What differs** is in `tag-input.css`. No field button and no Spinner, so the
+frame ends with a text input's own 1.5rem; the box takes `flex: 1 1 8rem`, so
+it wraps to a row of its own once less than 8rem is left beside the last tag,
+and a reader never types into a sliver. Without a label a changed field draws
+the clay dot at the text's end, 24px in, field.css's default place, and the
+box stops a dot and a part step sooner, as a text input does (spec correction
+23). A preset whose box is `dir="ltr"` marks the field `data-ltr`, and each
+tag's text is `direction: ltr; unicode-bidi: isolate`, so an address keeps
+its order on a Persian page while the tags run from the right. The count
+against `maxValues` sits at the label row's end. The polite status host is
+clipped from sight and placed on both lines of the field's grid.
+
+**The corner** is MultiSelect's: the frame a pill while one row and the 24px
+surface step once it wraps; a tag concentric with it, the frame's radius less
+the 6px between them, 18px in Rounded, 6px in Soft, 0 in Square
+("Nested radii, derived"). `TagsInPlace` measures it in every shape and
+density, with the box never narrower than 8rem and a 60-character tag cut at
+12rem.
+
+**The value is always valid** (ruling 8). One pure step, `commitText`, turns
+text into values with the preset: split, cleaned, checked, compared by key,
+and held to the limit. What passes is added in order; a duplicate is dropped
+and said, and the tag it matched stays where it was; what the preset refuses,
+and what the limit leaves out, stays in the box joined by the preset's join,
+in its order. So `value` never holds a value the preset refused, and
+`onChange` is never called with one. Refused text makes the field invalid
+with the preset's error line, which is also the box's custom validity, so the
+form will not submit while it is there; the line goes when the text changes.
+React Aria shows a native field's validation on the box's change event, so
+the field sends one after each refusal, fix and list change, and the line
+follows at once (spec correction 26).
+
+**Typed delimiters wait for clean text** (plan open question 4). A delimiter
+typed into the box adds the candidates before it only when every one passes
+and fits the limit, and otherwise leaves the text exactly as typed, with no
+error, so the space inside "Ana Silva <ana@example.com>" waits for the
+address. Enter, a paste and leaving the field commit everything, and refuse
+with the error line.
+
+**Delimiters are read from the text**, after each change, never from
+`keydown`, since Android keyboards report most keys as `Unidentified`
+(`AndroidInput`). While an input method composes nothing is split, and Enter
+with `isComposing` or `keyCode` 229 is the input method's, so a Persian or
+Chinese word is never cut in half (`Composition`). Enter in an empty box is
+left to the browser, which submits the form. A pasted list is committed
+whole: a text box strips a pasted line break, so the field reads the
+clipboard's text, keeps its breaks, and splits it as it was copied; a paste
+with no delimiter is the browser's and waits in the box (spec correction 25).
+
+**The presets** (ruling 11) are plain objects in a module with no
+`'use client'` and no import, so a server action imports them and checks the
+submitted values with the same rules. The email rule is the HTML standard's
+"valid email address", what `<input type="email">` accepts, with a dot
+required after the `@`: the browser's own rule, so the field agrees with
+every email input on the web, and the dot because an address with no dot in
+its domain is a typo far more often than a real address (spec 11 item 10).
+It refuses an internationalized local part, as the standard does; the docs
+show the spread that extends it (risk R7). Domains take labels in any
+script, a last label not all digits, 253 characters at most and a leading
+`*.`; a pasted URL gives its host. Paths start with a slash, collapse runs of
+slashes and keep their case; a pasted URL gives its path. Each sets the box's
+keyboard, turns capitals, corrections and spelling off, and sets the box
+`dir="ltr"`. A preset holds functions, which a server component cannot pass
+to a client one, so a page renders a tag input with a preset from a client
+component (spec correction 34).
+
+**The take-back** (ruling 13). Backspace in an empty box takes the last tag
+back into the text with the caret at its end; Enter on a tag takes that tag
+back. It differs on purpose from MultiSelect's Backspace, which focuses the
+last tag and removes it only on a second press: there a removed value is
+gone, here it is in the box in plain sight, and Enter, a delimiter or leaving
+the field adds it again. A held Backspace takes back one tag and then deletes
+its letters (`HeldBackspace`).
+
+**Focus never falls to the body** (lessons 10 and 16). When a tag leaves,
+taken back or removed, focus moves in the key's or the press's handler, while
+the tag still holds it, to the box, the next tag, the previous one, or the
+box when none is left; the frame after the commit only repairs focus lost
+all the same and puts the caret at the end (spec correction 31).
+`TakeBackFocus` finds no focus lost to nothing in three engines. Leaving the
+field commits what passes and leaves focus where the reader put it, so an
+address typed before a press on Save is submitted (`BlurBeforeSave`).
+
+**What is said.** A polite status, a sibling of the frame and never inside
+an `aria-busy` element, gathers what happened over `QUIET_MS` and says it
+once, after any focus move: "Added ana@example.com", or "Added 12" for a
+list; "ana@example.com is already added"; "Editing ana@example.com" for a
+take-back; and "Removed ana@example.com" for a removal (spec correction 30).
+Refusals and the limit are in the error line, which describes the box, and
+are not repeated. Each sentence is a new node, so the same words twice are
+said twice.
+
+**The hidden inputs** (ruling 10). With `name`, one hidden input per value,
+in order, and one with an empty value when there are none, MultiSelect's
+shape, in the server's HTML as after it, so `formData.getAll(name)` is the
+list and a form submitted before hydration sends the values already there.
+The box has no name. A form's reset puts back the values of the first render
+and clears the text and the error line. `isRequired` puts the native
+`required` on the box only while the list is empty, so the browser stops an
+empty list and focuses the box while a list with values submits, and
+`aria-required` on it always.
+
+**Text typed before hydration** stays: React leaves the box's text at
+hydration, and the field reads it once, in its first commit, before React's
+first update would put the controlled text back (spec correction 32;
+`TypedBeforeHydration`).
+
+**Contrast** is MultiSelect's, gated: the tag's ink on bone 16.76 and 15.36,
+the remove glyph's slate on bone 4.99 and 6.44. **The remove circle** is
+20px hit at 24px, MultiSelect's record, which meets 2.5.8 with its neighbor
+4px away and stays under the library's 40px floor for the same reason, since
+a 40px hit would cover the next tag.
+
+**Density.** The frame is `--size-field` tall a row and a tag
+`calc(var(--size-field) - 0.75rem)`: 48 and 36px, 36 and 24px compact, 44
+and 32px compact on a coarse pointer.
+
+**Forced colors** are MultiSelect's: a tag's 1px edge and its glyph in
+`canvastext`, a disabled tag `graytext`; and a disabled field's placeholder
+`graytext`.
+
+**The size.** `{ TagInput }` measures 4.15 kB without React Aria, Lucide and
+`@internationalized/date`, 0.15 kB over the spec's 4 kB budget; the rule
+gives a 5 kB limit. With React Aria not ignored it measures 42.06 kB. The
+presets measure 746 B either way, since their module imports nothing; the
+rule gives 1.5 kB (spec correction 36).
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): the label and hint on the box, the tags described after
+it, "Added ana@example.com" after Enter, the error line when text stays, and
+React Aria's English "Press Delete to remove tag." on a tag. Not yet
+verified on a real Android phone with its own keyboard, on an iPhone, with a Persian
+and a Chinese input method, in Windows' contrast themes, or on phones at
+320px to 430px.

@@ -36,6 +36,7 @@ import { ThemeSwitch } from '../src/theme-switch';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Accordion, AccordionItem } from '../src/accordion';
+import { TagInput, emailPreset } from '../src/tag-input';
 import { Gauge } from '../src/gauge';
 import { MonthGrid } from '../src/month-grid';
 import {
@@ -148,6 +149,24 @@ function ServerSections({ multiple = true }: { multiple?: boolean }): ReactEleme
         <p>Delete the account</p>
       </AccordionItem>
     </Accordion>
+  );
+}
+
+/** An invite field as a sharing form draws it on the server: two addresses, a limit and a hint. */
+function ServerInvite({
+  values = ['ana@example.com', 'bo@example.com'],
+}: {
+  values?: string[];
+}): ReactElement {
+  return (
+    <TagInput
+      label="Invite people"
+      description="Separate addresses with commas or spaces."
+      name="invite"
+      preset={emailPreset}
+      maxValues={10}
+      defaultValue={values}
+    />
   );
 }
 
@@ -521,6 +540,9 @@ const FACES: [name: string, element: ReactElement][] = [
   ['Repeater two entries', <ServerTiers rows={DEFAULT_TIERS.slice(0, 2)} />],
   // Nothing reads the locale, the zone or the width: the headings, the toggles, the panels and Show all.
   ['Accordion', <ServerSections />],
+  // Nothing reads the locale: the tags, the hidden inputs, the count and the empty status host.
+  ['TagInput', <ServerInvite />],
+  ['TagInput empty', <ServerInvite values={[]} />],
 ];
 
 describe('the server face', () => {

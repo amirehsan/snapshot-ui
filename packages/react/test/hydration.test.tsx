@@ -36,6 +36,7 @@ import { ThemeSwitch } from '../src/theme-switch';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Accordion, AccordionItem } from '../src/accordion';
+import { TagInput, emailPreset } from '../src/tag-input';
 import { Gauge } from '../src/gauge';
 import { MonthGrid } from '../src/month-grid';
 import {
@@ -163,6 +164,24 @@ function ServerSections({ multiple = true }: { multiple?: boolean }): ReactEleme
         <p>Delete the account</p>
       </AccordionItem>
     </Accordion>
+  );
+}
+
+/** An invite field as a sharing form draws it on the server: two addresses, a limit and a hint. */
+function ServerInvite({
+  values = ['ana@example.com', 'bo@example.com'],
+}: {
+  values?: string[];
+}): ReactElement {
+  return (
+    <TagInput
+      label="Invite people"
+      description="Separate addresses with commas or spaces."
+      name="invite"
+      preset={emailPreset}
+      maxValues={10}
+      defaultValue={values}
+    />
   );
 }
 
@@ -906,6 +925,33 @@ const HYDRATED: [
         folds.join(' '),
       );
       expect(document.activeElement).toBe(document.body);
+    },
+  ],
+  [
+    // The tags, the hidden inputs and the count the server drew, no focus moved and nothing said.
+    'TagInput',
+    <ServerInvite />,
+    (container) => {
+      expect([...container.querySelectorAll('.tag-input-tag-text')].map((tag) => tag.textContent)).toEqual([
+        'ana@example.com',
+        'bo@example.com',
+      ]);
+      expect(
+        [...container.querySelectorAll<HTMLInputElement>('input[type="hidden"]')].map((input) => input.value),
+      ).toEqual(['ana@example.com', 'bo@example.com']);
+      expect(container.querySelector('.field-counter')).toHaveTextContent('2/10');
+      expect(container.querySelector('.tag-input-status')).toBeEmptyDOMElement();
+      expect(document.activeElement).toBe(document.body);
+    },
+  ],
+  [
+    'TagInput empty',
+    <ServerInvite values={[]} />,
+    (container) => {
+      expect(
+        [...container.querySelectorAll<HTMLInputElement>('input[type="hidden"]')].map((input) => input.value),
+      ).toEqual(['']);
+      expect(container.querySelector('.tag-input-tag')).toBeNull();
     },
   ],
   [

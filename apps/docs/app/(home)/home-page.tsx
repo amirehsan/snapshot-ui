@@ -691,7 +691,9 @@ export function HomePage(): ReactElement {
                 <Link className="chip" href="/docs/components/combo-box">
                   Combo box
                 </Link>
-                <span className="chip">Tag input</span>
+                <Link className="chip" href="/docs/components/tag-input">
+                  Tag input
+                </Link>
               </div>
             </Card>
             <Card className="catalog-group">
@@ -859,6 +861,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/stat-tile">Stat tile</Link>
                 <Link href="/docs/components/switch">Switch</Link>
                 <Link href="/docs/components/tabs">Tabs</Link>
+                <Link href="/docs/components/tag-input">Tag input</Link>
                 <Link href="/docs/components/theme-switch">Theme switch</Link>
                 <Link href="/docs/components/text-area">Text area</Link>
                 <Link href="/docs/components/text-field">Text field</Link>

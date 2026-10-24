@@ -148,6 +148,20 @@ test.describe('forced colors', () => {
   const switchNamed = (page: Page, name: string): Locator =>
     page.locator('.switch').filter({ has: page.getByRole('switch', { name, exact: true }) });
 
+  test('a tag keeps its border and its remove glyph', async ({ page }) => {
+    await visit(page, '/docs/components/tag-input');
+    const tag = page.locator('.stage .tag-input-tag').first();
+    await expect(tag).toBeVisible();
+    const text = await systemColor(page, 'CanvasText');
+    // The bone fill is gone in forced colors, so the tag's 1px edge is what draws it, in the reader's text color.
+    const drawn = await paint(tag);
+    expect(drawn.edge).toBe(text);
+    expect(await tag.evaluate((element) => getComputedStyle(element).borderTopStyle)).toBe('solid');
+    const glyph = tag.locator('.tag-input-tag-remove');
+    expect((await paint(glyph)).text).toBe(text);
+    expect((await paint(glyph)).text).not.toBe(await systemColor(page, 'canvas'));
+  });
+
   test('a folded accordion keeps its rules, its chevron and its marker', async ({ page }) => {
     await visit(page, '/docs/components/accordion');
     const form = page.locator('.stage form').filter({ has: page.locator('.accordion') });
@@ -2079,6 +2093,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   switch: ['.stage .switch-text', '.stage .field-description'],
   // A long name scrolls the row inside its track; a panel's text wraps by the page's own rules.
   tabs: ['.stage .tab-label', '.stage .tab-panel p'],
+  // A tag is one word that ellipsizes at 12rem; the label and the hint are the app's words.
+  'tag-input': ['.stage .field-label', '.stage .field-description', '.stage .tag-input-tag-text'],
   'text-area': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   'text-field': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   // A numeral is a figure and never wraps (white-space: nowrap), so a web address is not put into one.
@@ -2481,6 +2497,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   switch: ['.stage .switch-thumb'],
   // The row, the selected tab and its panel: the whole selected state is in the server's HTML.
   tabs: ['.stage .tab-list', '.stage .tab[aria-selected="true"]', '.stage .tab-panel'],
+  // The frame, a tag per value and a hidden input per value: a form submitted before hydration sends them.
+  'tag-input': ['.stage .tag-input-control', '.stage .tag-input-tag', '.stage input[type=hidden]'],
   'theme-switch': ['.stage .segmented', '.stage .theme-switch'],
   'text-area': ['.stage .textarea'],
   'text-field': ['.stage .input'],
@@ -2960,6 +2978,22 @@ test.describe('panel layout', () => {
     await expect(layout).toHaveAttribute('data-view', 'section');
     await expect(phone.getByRole('heading', { name: 'Logos' })).toBeFocused();
     expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+  });
+});
+
+test.describe('the tag input', () => {
+  test.describe('with scripts off', () => {
+    test.use({ javaScriptEnabled: false });
+
+    test('a tag input form submitted with scripts off sends the tags already there', async ({ page }) => {
+      await page.goto('/docs/components/tag-input');
+      const form = page.locator('.stage form').filter({ has: page.locator('.tag-input') });
+      await expect(form.locator('.tag-input-tag')).toHaveCount(2);
+      await form.getByRole('button', { name: 'Send invites' }).click();
+      await page.waitForURL(/invite=/);
+      const sent = new URL(page.url()).searchParams.getAll('invite');
+      expect(sent).toEqual(['ana@example.com', 'bo@example.com']);
+    });
   });
 });
 

@@ -15,6 +15,7 @@ import {
   CardNote,
   CardTitle,
   DataTable,
+  emailPreset,
   Eyebrow,
   Heading,
   Kbd,
@@ -23,6 +24,7 @@ import {
   Pagination,
   Prose,
   RouterProvider,
+  TagInput,
   Text,
   UploadList,
   type DataTableColumn,
@@ -114,6 +116,17 @@ const PARTS: [name: string, render: (twin: string) => ReactElement][] = [
           <p>Close the account.</p>
         </AccordionItem>
       </Accordion>
+    ),
+  ],
+  [
+    'TagInput',
+    () => (
+      <TagInput
+        label="Invite people"
+        description="Separate addresses with commas."
+        preset={emailPreset}
+        defaultValue={['ana@example.com', 'bo@example.com']}
+      />
     ),
   ],
   [

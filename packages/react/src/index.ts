@@ -311,3 +311,13 @@ export {
   type AccordionLabels,
   type AccordionProps,
 } from './accordion';
+export {
+  TagInput,
+  domainPreset,
+  emailPreset,
+  pathPreset,
+  type TagInputBaseProps,
+  type TagInputLabels,
+  type TagInputPreset,
+  type TagInputProps,
+} from './tag-input';

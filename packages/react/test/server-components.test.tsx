@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import type { ReactElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+import { domainPreset, emailPreset } from '../src/tag-input/presets';
 import { outermostClasses, proseRoots } from './prose-roots';
 
 // React as a server component sees it: the react-server build, which has no state, no effects, no refs
@@ -622,5 +623,19 @@ describe('every component source', () => {
         !STATIC_MODULES.includes(file),
     );
     expect(unlisted).toEqual([]);
+  });
+});
+
+describe('the choices presets in a server component', () => {
+  // TagInput's presets have no directive and import nothing from React, so a server component, or a server action,
+  // calls their functions to check what a form sent (ruling 11).
+  it('runs the presets in a server component', () => {
+    function Checked({ sent }: { sent: string[] }): ReactElement {
+      const kept = sent.map(emailPreset.normalize).filter(emailPreset.isValid);
+      return <p>{`${kept.join(' ')} ${domainPreset.normalize('https://Example.com:8080/path')}`}</p>;
+    }
+    expect(renderToStaticMarkup(<Checked sent={['Ana@Example.COM', 'nope', 'mailto:bo@x.io']} />)).toBe(
+      '<p>Ana@example.com bo@x.io example.com</p>',
+    );
   });
 });

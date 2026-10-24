@@ -2,6 +2,7 @@ import { act, render, screen } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { Accordion, AccordionItem } from '../src/accordion';
+import { TagInput } from '../src/tag-input';
 import { AppShell } from '../src/app-shell';
 import { Button } from '../src/button';
 import { RangeCalendar } from '../src/calendar';
@@ -596,6 +597,25 @@ describe('an empty choices part slot', () => {
           (child) => child.className,
         ),
       ).toEqual(['accordion-heading', 'accordion-fold']);
+      unmount();
+    }
+  });
+
+  it('draws no description and no counter for a TagInput with neither', () => {
+    for (const empty of [undefined, false, null, '']) {
+      const { container, unmount } = render(
+        <TagInput label="Invite people" description={empty} defaultValue={['ana@example.com']} />,
+      );
+      expect(container.querySelector('.field-description')).toBeNull();
+      expect(container.querySelector('.field-counter')).toBeNull();
+      // The label row holds the label and the chip, and nothing after them.
+      expect(
+        [...(container.querySelector('.field-head')?.children ?? [])].map((child) => child.className),
+      ).toEqual(['field-label', 'field-changed']);
+      // The box describes itself by the tags alone.
+      expect(container.querySelector('input')?.getAttribute('aria-describedby')).toBe(
+        container.querySelector('.tag-input-tags')?.id,
+      );
       unmount();
     }
   });

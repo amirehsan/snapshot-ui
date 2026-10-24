@@ -62,6 +62,7 @@ import { firstLineOffset, lineCount } from '../stories/paint';
 import { ownContent, Rendered } from '../stories/prose';
 import { Switch } from '../switch';
 import { Tab, TabList, TabPanel, Tabs } from '../tabs';
+import { TagInput, emailPreset } from '../tag-input';
 import { ThemeMenu, type ThemeChoice } from '../theme-switch';
 import { TextArea } from '../text-area';
 import { TextField } from '../text-field';
@@ -2767,5 +2768,53 @@ export const AccordionMirrored: Story = {
     await waitFor(() => expect(canvas.getByRole('button', { name: 'منطقه‌ی خطر' })).toHaveFocus());
     // The shot shows the sections at rest, with no ring.
     (document.activeElement as HTMLElement | null)?.blur();
+  },
+};
+
+/**
+ * Three addresses in a Persian invite field: the tags run from the frame's right, the first at the right, and each
+ * address keeps its own order inside its tag, its local part left of its @. Arrow Left moves to the next tag, which
+ * is drawn to the left.
+ */
+export const TagInputMirrored: Story = {
+  tags: ['!no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" data-font="vazirmatn" style={{ width: 'min(32rem, calc(100vw - 2rem))' }}>
+        <TagInput
+          label="دعوت از افراد"
+          description="نشانی‌ها را با ویرگول یا فاصله جدا کنید."
+          preset={emailPreset}
+          defaultValue={['ana@example.com', 'bo@example.com', 'cy@example.com']}
+          labels={{ added: 'افزوده', remove: 'حذف' }}
+        />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    await document.fonts.load('500 16px Vazirmatn', 'دعوت از افراد');
+    await document.fonts.ready;
+    const frame = find(canvasElement, '.tag-input-control');
+    const tags = [...canvasElement.querySelectorAll<HTMLElement>('.tag-input-tag')];
+    const [first, second] = tags;
+    if (!first || !second) throw new Error('Three tags expected');
+    // The first tag at the right of the frame, inside its padding; the second to its left.
+    await expect(rect(frame).right - rect(first).right).toBeLessThan(16);
+    await expect(rect(second).right).toBeLessThanOrEqual(rect(first).left + 0.5);
+    // Each address left to right inside its tag: its first letter left of its @.
+    for (const text of canvasElement.querySelectorAll<HTMLElement>('.tag-input-tag-text')) {
+      const at = text.textContent.indexOf('@');
+      await expect(characterBox(text, 0).left).toBeLessThan(characterBox(text, at).left);
+      await expect(getComputedStyle(text).direction).toBe('ltr');
+    }
+    // Arrow Left goes to the next tag, drawn to the left.
+    await waitFor(() => {
+      if (document.activeElement !== first) first.focus();
+      return expect(first).toHaveFocus();
+    });
+    await userEvent.keyboard('{ArrowLeft}');
+    await waitFor(() => expect(second).toHaveFocus());
+    // The shot shows the field at rest, with no ring.
+    second.blur();
   },
 };
