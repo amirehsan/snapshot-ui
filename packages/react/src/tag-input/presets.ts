@@ -47,15 +47,17 @@ const ADDRESS_BOX: TagInputInputProps = {
   enterKeyHint: 'enter',
 };
 
-// The HTML standard's "valid email address", what input type=email accepts, with at least one dot after the @
-// (spec 11 item 10): the standard's (\.label)* becomes (\.label)+.
-const LOCAL = "[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+";
-const EMAIL_LABEL = '[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?';
-const EMAIL = new RegExp(`^${LOCAL}@${EMAIL_LABEL}(?:\\.${EMAIL_LABEL})+$`);
-
-// A domain's label: 1 to 63 letters, digits or hyphens, any script, no hyphen at its ends.
-const LABEL = '[\\p{L}\\p{N}](?:[\\p{L}\\p{N}-]{0,61}[\\p{L}\\p{N}])?';
+// A domain's label: 1 to 63 letters, digits or hyphens, any script, starting with a letter or a digit and with no
+// hyphen at its ends. After its first letter it holds marks too, which Devanagari and Thai write vowels and tones
+// with.
+const LABEL = '[\\p{L}\\p{N}](?:[\\p{L}\\p{N}\\p{M}-]{0,61}[\\p{L}\\p{N}\\p{M}])?';
 const DOMAIN = new RegExp(`^(?:\\*\\.)?(?:${LABEL}\\.)+${LABEL}$`, 'u');
+
+// The HTML standard's "valid email address", what input type=email accepts, with at least one dot after the @
+// (spec 11 item 10): the standard's (\.label)* becomes (\.label)+. Its domain takes a domain's labels in any
+// script, as an email box does, which shows such a domain and sends it in its ASCII form; the local part is ASCII.
+const LOCAL = "[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+";
+const EMAIL = new RegExp(`^${LOCAL}@${LABEL}(?:\\.${LABEL})+$`, 'u');
 const ALL_DIGITS = /^\p{N}+$/u;
 
 /** A text that starts with a URL scheme, such as `https://`. */
@@ -117,7 +119,12 @@ export const emailPreset: TagInputPreset = {
       .replace(/^mailto:/i, '')
       .trim();
     const at = bare.lastIndexOf('@');
-    return at === -1 ? bare : `${bare.slice(0, at)}@${bare.slice(at + 1).toLowerCase()}`;
+    return at === -1
+      ? bare
+      : `${bare.slice(0, at)}@${bare
+          .slice(at + 1)
+          .normalize('NFC')
+          .toLowerCase()}`;
   },
   isValid: (value) => EMAIL.test(value),
   key: (value) => value.toLowerCase(),
@@ -137,6 +144,7 @@ export const domainPreset: TagInputPreset = {
   normalize: (value) =>
     value
       .trim()
+      .normalize('NFC')
       .toLowerCase()
       .replace(SCHEME, '')
       .replace(/[/?#].*$/, '')

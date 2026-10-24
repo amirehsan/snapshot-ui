@@ -43,11 +43,11 @@ A preset says how text becomes values: how a paste is split, how each value is c
 
 ### Emails
 
-`emailPreset` splits on commas, semicolons, new lines and spaces, never inside quotes or angle brackets, and takes the address out of `Ana Silva <ana@example.com>`. A pasted line of several named addresses gives every address, and `"Silva, Ana" <ana@example.com>` gives one. It drops a `mailto:` and lowercases the part after the `@`. An address passes when `<input type="email">` would accept it and its domain has a dot, so `ana@localhost` stays in the box. Two addresses are the same whatever their case. The error line reads "Enter email addresses in the correct format, like name@example.com".
+`emailPreset` splits on commas, semicolons, new lines and spaces, never inside quotes or angle brackets, and takes the address out of `Ana Silva <ana@example.com>`. A pasted line of several named addresses gives every address, and `"Silva, Ana" <ana@example.com>` gives one. It drops a `mailto:` and lowercases the part after the `@`. An address passes when `<input type="email">` would accept it and its domain has a dot, so `ana@localhost` stays in the box. Its domain may be in any script, as in `ana@bücher.de`, as an email box allows. Two addresses are the same whatever their case. The error line reads "Enter email addresses in the correct format, like name@example.com".
 
 ### Domains
 
-`domainPreset` splits on commas, semicolons and white space. A pasted address keeps only its host: `https://Example.com:8080/pricing` becomes `example.com`. A domain passes with two or more labels of letters, digits and inner hyphens, in any script, a last label that is not all digits, and 253 characters at most; `*.example.com` stands for every subdomain. The error line reads "Enter domains like example.com".
+`domainPreset` splits on commas, semicolons and white space. A pasted address keeps only its host: `https://Example.com:8080/pricing` becomes `example.com`. A domain passes with two or more labels of letters, digits and inner hyphens, in any script and with the marks some scripts write vowels with, a last label that is not all digits, and 253 characters at most; `*.example.com` stands for every subdomain. The error line reads "Enter domains like example.com".
 
 ### Paths
 

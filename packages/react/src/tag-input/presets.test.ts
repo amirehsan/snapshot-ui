@@ -45,6 +45,18 @@ describe('emailPreset', () => {
     expect(keyOf(emailPreset, 'Ana@Example.com')).toBe(keyOf(emailPreset, 'ana@example.com'));
   });
 
+  it.each([
+    ['ana@bücher.de', 'ana@bücher.de', true],
+    ['ana@BÜCHER.de', 'ana@bücher.de', true],
+    ['ana@bücher.de', 'ana@bücher.de', true],
+    ['ana@हिन्दी.भारत', 'ana@हिन्दी.भारत', true],
+    ['ana@مثال.ایران', 'ana@مثال.ایران', true],
+    ['anä@example.com', 'anä@example.com', false],
+  ])('takes a domain in any script, as an email box does: %s', (text, value, valid) => {
+    expect(clean(emailPreset, text)).toEqual([value]);
+    expect(accepts(emailPreset, text)).toBe(valid);
+  });
+
   it('splits a pasted list on commas, semicolons, new lines and spaces, and takes the address from a name', () => {
     expect(
       clean(emailPreset, 'Ana Smith <ana@example.com>, bo@example.com;\ncy@example.com dee@example.com\r\n'),
@@ -111,6 +123,22 @@ describe('domainPreset', () => {
     ['a-b.example.com', true],
   ])('accepts %s: %s', (text, valid) => {
     expect(accepts(domainPreset, text)).toBe(valid);
+  });
+
+  it.each([
+    // Devanagari and Thai write vowels and tones as marks, which a label holds after its first letter.
+    ['हिन्दी.भारत', true],
+    ['ไทย.ไทย', true],
+    ['เว็บ.ไทย', true],
+    ['́ex.com', false],
+  ])('accepts a label in any script, marks included: %s %s', (text, valid) => {
+    expect(accepts(domainPreset, text)).toBe(valid);
+  });
+
+  it('composes a decomposed name, so it passes and is the same as the composed one', () => {
+    const decomposed = 'bücher.de';
+    expect(clean(domainPreset, decomposed)).toEqual(['bücher.de']);
+    expect(accepts(domainPreset, decomposed)).toBe(true);
   });
 
   it('refuses a name longer than 253 characters and accepts one of 253', () => {
