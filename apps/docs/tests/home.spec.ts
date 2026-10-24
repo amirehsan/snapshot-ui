@@ -175,6 +175,39 @@ for (const width of [1024, 1440, 1920]) {
   });
 }
 
+/** The tops and bottoms of the hero's eyebrow, title and lede, in client pixels. */
+const heroBoxes = (
+  page: Page,
+): Promise<Record<'eyebrow' | 'title' | 'lede', { top: number; bottom: number }>> =>
+  page.locator('.hero').evaluate((hero) => {
+    const box = (selector: string): { top: number; bottom: number } => {
+      const rect = hero.querySelector(selector)?.getBoundingClientRect();
+      if (!rect) throw new Error(`No ${selector} in the hero`);
+      return { top: rect.top, bottom: rect.bottom };
+    };
+    return { eyebrow: box('.eyebrow'), title: box('h1'), lede: box('.lede') };
+  });
+
+for (const width of [1024, 1294, 1440]) {
+  test(`the hero's eyebrow and lede start on one top line at ${String(width)}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await visit(page);
+    const { eyebrow, title, lede } = await heroBoxes(page);
+    // The title block starts where the description does, with no dead space over the eyebrow.
+    expect(Math.abs(eyebrow.top - lede.top)).toBeLessThanOrEqual(4);
+    expect(title.top).toBeGreaterThan(eyebrow.bottom);
+  });
+}
+
+for (const width of [375, 768]) {
+  test(`the hero stacks with the title first at ${String(width)}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await visit(page);
+    const { title, lede } = await heroBoxes(page);
+    expect(lede.top).toBeGreaterThan(title.bottom);
+  });
+}
+
 test.describe('before the page scripts load', () => {
   test.use({ javaScriptEnabled: false });
 
