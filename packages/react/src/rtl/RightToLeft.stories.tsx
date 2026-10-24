@@ -2647,6 +2647,12 @@ export const AccountMenuMirrored: Story = {
     </I18nProvider>
   ),
   play: async ({ canvasElement }) => {
+    // Vazirmatn loads when the trigger first draws, and its name is narrower in it than in the fallback face, so
+    // the column, as wide as the trigger, moves when it arrives. A submenu placed before then stays put, so
+    // nothing opens until the face is in.
+    await document.fonts.load('500 16px Vazirmatn', 'آدا لاولیس');
+    await document.fonts.ready;
+    await waitFor(() => expect(document.fonts.check('500 16px Vazirmatn', 'آدا لاولیس')).toBe(true));
     const trigger = find(canvasElement, '.account-menu-trigger');
     // The avatar at the start, the right, and the chevron at the end, the left, drawn as it is.
     await expect(rect(find(trigger, '.avatar')).left).toBeGreaterThan(
@@ -2660,6 +2666,16 @@ export const AccountMenuMirrored: Story = {
     await waitFor(() => expect(trigger).toHaveFocus());
     await userEvent.keyboard('{Enter}');
     const body = within(document.body);
+    // The menu placed and entered before the submenu is placed beside its row.
+    const menu = await waitFor(() => {
+      const found = find(document, '.menu-popover');
+      if (!found.hasAttribute('data-placement') || found.hasAttribute('data-entering'))
+        throw new Error('Not open');
+      return found;
+    });
+    await Promise.all(
+      menu.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => null)),
+    );
     await waitFor(() => expect(body.getByRole('menuitem', { name: 'تنظیمات' })).toHaveFocus());
     await userEvent.keyboard('{ArrowDown}{ArrowLeft}');
     const theme = body.getByRole('menuitem', { name: 'پوسته' });
@@ -2675,6 +2691,9 @@ export const AccountMenuMirrored: Story = {
     await waitFor(() => expect(body.getByRole('menuitemradio', { name: 'سیستم' })).toHaveFocus());
     // The submenu opens at the row's end, its left, and the row's chevron points there.
     await expect(rect(submenu).right).toBeLessThanOrEqual(rect(theme).left + 1);
+    // Its first row is level with Theme, which it is only when placed beside a menu at rest.
+    const first = body.getByRole('menuitemradio', { name: 'سیستم' });
+    await expect(Math.abs(rect(first).top - rect(theme).top)).toBeLessThanOrEqual(1);
     await expect(getComputedStyle(find(theme, '.menu-item-submenu svg')).scale).toBe('-1 1');
     await expect(rect(find(theme, '.menu-item-submenu')).left).toBeLessThan(
       rect(find(theme, '.menu-item-end')).left,
