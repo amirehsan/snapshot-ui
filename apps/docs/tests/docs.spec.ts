@@ -655,7 +655,7 @@ test('the installation page explains the server face and the date library', asyn
 test('the chart pages name the core version charts needs', async ({ page }) => {
   for (const slug of ['bar-chart', 'line-chart', 'sparkline']) {
     await visit(page, `/docs/charts/${slug}`);
-    await expect(page.locator('main'), slug).toContainText('0.9 for charts 0.2.0');
+    await expect(page.locator('main'), slug).toContainText('0.10 for charts 0.2.1');
   }
 });
 
@@ -699,7 +699,7 @@ test('the installation page names Prose and ProseScroll among the static parts, 
   await visit(page, '/docs/installation');
   const section = guideSection(page, 'Next.js server components');
   await expect(section).toHaveCount(1);
-  await expect(section).toContainText('MonthGrid, and Prose and ProseScroll.');
+  await expect(section).toContainText('MonthGrid, Prose and ProseScroll, and PanelSection and PanelRow.');
   for (const text of ['BarChart and LineChart are client components', 'remark-gfm', 'skipHtml']) {
     await expect(section, text).toContainText(text);
   }
@@ -720,6 +720,21 @@ test('the installation page names the account parts among the static ones, and t
   await visit(page, '/docs');
   await expect(guideSection(page, 'Status')).toContainText(
     "An account's pages: a description list for its details, actions in a card's header, a gauge for a score or a limit, and a month grid for which statements you have.",
+  );
+});
+
+test('the installation page names the settings parts, client and static, and the status lists them', async ({
+  page,
+}) => {
+  await visit(page, '/docs/installation');
+  const section = guideSection(page, 'Next.js server components');
+  await expect(section).toContainText('Prose and ProseScroll, and PanelSection and PanelRow.');
+  await expect(section).toContainText(
+    'CopyButton, ConditionalFields, FieldExtras, Repeater, PanelLayout, PanelNav, PanelNavItem, ThemeSwitch, ThemeMenu and AccountMenu are client components',
+  );
+  await visit(page, '/docs');
+  await expect(guideSection(page, 'Status')).toContainText(
+    'A settings page: one address per section beside a list, rows to add and remove, fields that come and go, defaults and suggestions, the theme and the account menu, and a copy button.',
   );
 });
 
@@ -3717,7 +3732,7 @@ test('the installation page installs the charts package and names the core versi
   const section = page
     .locator('.docs-section')
     .filter({ has: page.getByRole('heading', { name: 'Charts', exact: true }) });
-  await expect(section).toContainText('0.9 for charts 0.2.0');
+  await expect(section).toContainText('0.10 for charts 0.2.1');
   await expect(section.getByRole('link', { name: 'Bar chart', exact: true })).toHaveAttribute(
     'href',
     '/docs/charts/bar-chart',
@@ -5551,3 +5566,298 @@ test('opening another page of the recipe gives its heading focus, and a tab keep
   ).toBeFocused();
   expect(await focusOnBody(page)).toBe(false);
 });
+
+// ---- The Settings recipe --------------------------------------------------------------------------------------
+
+const SETTINGS_PAGE = '/docs/components/panel-layout';
+
+/** The recipe's stage: the example whose nav is named "Settings", found by its markup, since a face may hide it. */
+const settingsRecipe = (page: Page): Locator =>
+  page.locator('.stage').filter({ has: page.locator('nav.panel-nav[aria-label="Settings"]') });
+
+/** The recipe at a section's address, or at its index. */
+const visitSettings = async (page: Page, section?: string): Promise<Locator> => {
+  await visit(page, section === undefined ? SETTINGS_PAGE : `${SETTINGS_PAGE}?settings=${section}`);
+  const recipe = settingsRecipe(page);
+  await expect(recipe).toHaveCount(1);
+  await recipe.scrollIntoViewIfNeeded();
+  return recipe;
+};
+
+/** Every section the recipe's nav draws, in its order, read from its links: the tests hold no count. */
+const settingsSections = (recipe: Locator): Promise<{ key: string; name: string }[]> =>
+  recipe.locator('.panel-nav-link').evaluateAll((links) =>
+    links.map((link) => ({
+      key: new URL((link as HTMLAnchorElement).href).searchParams.get('settings') ?? '',
+      name: link.querySelector('.panel-nav-name')?.textContent ?? '',
+    })),
+  );
+
+/** Fails when focus has fallen to the body or to nothing. */
+const expectFocusPlaced = async (page: Page): Promise<void> => {
+  expect(await focusOnBody(page), 'focus on the body').toBe(false);
+};
+
+/** The recipe's set of wait tiers. */
+const waitTiers = (recipe: Locator): Locator => recipe.getByRole('group', { name: 'Wait tiers' });
+
+/** Turns a switch by a press on its label, as a reader does: its input is clipped. */
+const flip = (recipe: Locator, label: string): Promise<void> =>
+  recipe.locator('.switch', { hasText: label }).click();
+
+for (const width of [375, 1280]) {
+  test.describe(`the settings recipe at ${String(width)}`, () => {
+    test.use({ viewport: { width, height: 800 } });
+
+    test('the settings index shows the list beside the first section on a desktop and the list alone on a phone', async ({
+      page,
+    }) => {
+      const recipe = await visitSettings(page);
+      const layout = recipe.locator('.panel-layout');
+      await expect(layout).toHaveAttribute('data-view', 'index');
+      const [first] = await settingsSections(recipe);
+      if (first === undefined) throw new Error('The recipe draws no section');
+      const nav = recipe.getByRole('navigation', { name: 'Settings', exact: true });
+      await expect(nav).toBeVisible();
+      // No link is the open page at the index; on a desktop the first section is drawn beside the list.
+      await expect(nav.locator('[aria-current]')).toHaveCount(0);
+      const region = recipe.getByRole('region', { name: first.name, exact: true });
+      if (width < 800) await expect(region).toBeHidden();
+      else await expect(region).toBeVisible();
+      await expect(recipe.getByRole('heading', { level: 2, name: 'Settings', exact: true })).toBeVisible();
+    });
+
+    test('each section link opens its own address and focuses its heading, and Back focuses the link left', async ({
+      page,
+    }) => {
+      const recipe = await visitSettings(page);
+      const layout = recipe.locator('.panel-layout');
+      const sections = await settingsSections(recipe);
+      expect(sections.length).toBeGreaterThan(0);
+      for (const { key, name } of sections) {
+        const link = recipe.getByRole('link', { name, exact: true });
+        await link.click();
+        await expect(page).toHaveURL(new RegExp(`\\?settings=${key}$`));
+        await expect(layout).toHaveAttribute('data-view', 'section');
+        await expect(recipe.getByRole('heading', { name, exact: true })).toBeFocused();
+        await expectFocusPlaced(page);
+        if (width < 800) {
+          // The list face: Back opens the list, and focus goes to the link of the section left.
+          await recipe.getByRole('link', { name: 'Settings', exact: true }).click();
+          await expect(layout).toHaveAttribute('data-view', 'index');
+          await expect(recipe.getByRole('link', { name, exact: true })).toBeFocused();
+          await expectFocusPlaced(page);
+        } else {
+          await expect(link).toHaveAttribute('aria-current', 'page');
+        }
+      }
+    });
+
+    test('a tier is added, a middle tier removed and the only tier removed, focus on a field, a Remove or Add each time', async ({
+      page,
+    }) => {
+      const recipe = await visitSettings(page, 'coach');
+      const tiers = waitTiers(recipe);
+      const add = tiers.getByRole('button', { name: 'Add a tier' });
+      await add.click();
+      // An add: the new row's first field.
+      await expect(
+        tiers.getByRole('group', { name: 'Tier 3' }).getByRole('textbox', { name: 'Up to' }),
+      ).toBeFocused();
+      await expectFocusPlaced(page);
+      // A middle tier: Remove in the row now in its place.
+      await tiers.getByRole('button', { name: 'Remove, Tier 2' }).click();
+      await expect(tiers.getByRole('button', { name: 'Remove, Tier 2' })).toBeFocused();
+      await expectFocusPlaced(page);
+      // The last tier: Remove in the row before it.
+      await tiers.getByRole('button', { name: 'Remove, Tier 2' }).click();
+      await expect(tiers.getByRole('button', { name: 'Remove, Tier 1' })).toBeFocused();
+      await expectFocusPlaced(page);
+      // The only tier: Add, under the empty line.
+      await tiers.getByRole('button', { name: 'Remove, Tier 1' }).click();
+      await expect(add).toBeFocused();
+      await expect(tiers.locator('.repeater-empty')).toHaveText('No tiers. The coach never waits.');
+      await expectFocusPlaced(page);
+    });
+
+    test('at three tiers Add is disabled and says why', async ({ page }) => {
+      const recipe = await visitSettings(page, 'coach');
+      const tiers = waitTiers(recipe);
+      const add = tiers.getByRole('button', { name: 'Add a tier' });
+      await expect(add).toHaveAccessibleDescription('2 of 3');
+      await add.click();
+      await expect(
+        tiers.getByRole('group', { name: 'Tier 3' }).getByRole('textbox', { name: 'Up to' }),
+      ).toBeFocused();
+      await expect(add).toBeDisabled();
+      await expect(add).toHaveAccessibleDescription('3 of 3. Remove a tier to add another.');
+      await expect(tiers.locator('.repeater-full')).toBeVisible();
+      await expect(tiers.getByRole('status')).toHaveText(
+        'Tier 3 added. 3 of 3. Remove a tier to add another.',
+      );
+      await expectFocusPlaced(page);
+    });
+
+    test('Reset to default restores the three default tiers and focuses the first amount', async ({
+      page,
+    }) => {
+      const recipe = await visitSettings(page, 'coach');
+      const tiers = waitTiers(recipe);
+      const reset = recipe.getByRole('button', { name: 'Reset to default, Wait tiers' });
+      await expect(reset).toHaveAccessibleDescription(
+        'Default: $100 waits 3 days, $500 a week, $1,500 a month',
+      );
+      await reset.click();
+      const amount = (row: string): Locator =>
+        tiers.getByRole('group', { name: row }).getByRole('textbox', { name: 'Up to' });
+      await expect(amount('Tier 1')).toBeFocused();
+      await expect(amount('Tier 1')).toHaveValue('100.00');
+      await expect(amount('Tier 3')).toHaveValue('1,500.00');
+      await expect(reset).toHaveCount(0);
+      await expectFocusPlaced(page);
+    });
+
+    test("the cushion's suggestion fills it and focuses it", async ({ page }) => {
+      const recipe = await visitSettings(page, 'coach');
+      const cushion = recipe.getByRole('textbox', { name: 'Cushion' });
+      await expect(cushion).toHaveValue('');
+      await recipe.getByRole('button', { name: 'Use, Cushion' }).click();
+      await expect(cushion).toBeFocused();
+      await expect(cushion).toHaveValue('2,340.00');
+      await expect(recipe.getByRole('button', { name: 'Use, Cushion' })).toHaveCount(0);
+      await expectFocusPlaced(page);
+    });
+
+    test('turning the logo off hides the provider and the key and turning it on brings them back', async ({
+      page,
+    }) => {
+      const recipe = await visitSettings(page, 'logos');
+      const key = recipe.getByRole('textbox', { name: 'API key' });
+      const provider = recipe.locator('.select', { hasText: 'Provider' });
+      // Off as saved: the provider and the key are kept in the page, hidden.
+      await expect(key).toBeHidden();
+      await expect(provider).toBeHidden();
+      await flip(recipe, 'Show bank logos');
+      await expect(provider).toBeVisible();
+      await key.fill('pk_live_7Fq2');
+      await expectFocusPlaced(page);
+      await flip(recipe, 'Show bank logos');
+      await expect(key).toBeHidden();
+      await expect(provider).toBeHidden();
+      await expectFocusPlaced(page);
+      await flip(recipe, 'Show bank logos');
+      await expect(key).toHaveValue('pk_live_7Fq2');
+      await expect(provider).toBeVisible();
+      // Off again and saved: the key is kept but not sent, and the section is clean.
+      await flip(recipe, 'Show bank logos');
+      await recipe.getByRole('button', { name: 'Save', exact: true }).click();
+      await expect(recipe.locator('.save-bar-chip')).toHaveCount(0);
+      // The nav's end state follows what is saved; a phone's section hides the nav, so it is read as text.
+      await expect(recipe.locator('.panel-nav-link[href$="settings=logos"] .panel-nav-end')).toHaveText(
+        'Off',
+      );
+      await expectFocusPlaced(page);
+    });
+
+    test("the weekly email's gate hides its status and Send a test", async ({ page }) => {
+      const recipe = await visitSettings(page, 'notifications');
+      const status = recipe.getByText('Last sent Monday at 9:00 to you@example.com');
+      const send = recipe.getByRole('button', { name: 'Send a test' });
+      await expect(status).toBeVisible();
+      await expect(send).toBeVisible();
+      await flip(recipe, 'Weekly email');
+      await expect(status).toBeHidden();
+      await expect(send).toBeHidden();
+      await expectFocusPlaced(page);
+      await flip(recipe, 'Weekly email');
+      await expect(status).toBeVisible();
+      await send.click();
+      await expect(
+        page.locator('.toast-title', { hasText: 'Test email sent to you@example.com' }),
+      ).toBeVisible();
+      await expectFocusPlaced(page);
+    });
+
+    test('Appearance applies at once and marks nothing changed', async ({ page }) => {
+      await page.emulateMedia({ colorScheme: 'light' });
+      const recipe = await visitSettings(page, 'appearance');
+      const group = recipe.getByRole('radiogroup', { name: 'Appearance', exact: true });
+      await expect(group.getByRole('radio', { name: 'System' })).toBeChecked();
+      await group.locator('.segmented-option', { hasText: 'Dark' }).click();
+      await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+      await expect(group.getByRole('radio', { name: 'Dark' })).toBeChecked();
+      // Nothing to save: no Changed chip, no save bar, and no question on leaving.
+      await expect(recipe.locator('[data-changed]')).toHaveCount(0);
+      await expect(recipe.locator('.field-changed:visible')).toHaveCount(0);
+      await expect(recipe.locator('.save-bar')).toHaveCount(0);
+      await expectFocusPlaced(page);
+      await group.locator('.segmented-option', { hasText: 'System' }).click();
+      await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    });
+
+    test('leaving a dirty section asks first', async ({ page }) => {
+      const recipe = await visitSettings(page, 'coach');
+      await recipe.getByRole('button', { name: 'Use, Cushion' }).click();
+      await expect(recipe.locator('.save-bar-chip')).toBeVisible();
+      // On a phone the way out is Back; on a desktop, another section's link.
+      const away =
+        width < 800
+          ? recipe.getByRole('link', { name: 'Settings', exact: true })
+          : recipe.getByRole('link', { name: 'Notifications', exact: true });
+      await away.click();
+      const question = page.getByRole('alertdialog', { name: 'Discard changes?' });
+      await expect(question).toBeVisible();
+      await expect(question).toContainText('The changes you made in Coach will be lost.');
+      // Keep editing: the section stays, and focus goes back to the link pressed.
+      await question.getByRole('button', { name: 'Keep editing' }).click();
+      await expect(question).toBeHidden();
+      await expect(page).toHaveURL(/\?settings=coach$/);
+      await expect(away).toBeFocused();
+      await expect(recipe.getByRole('textbox', { name: 'Cushion' })).toHaveValue('2,340.00');
+      // Discard: the next address opens, and its heading, or on a phone the link left, takes focus.
+      await away.click();
+      await page
+        .getByRole('alertdialog', { name: 'Discard changes?' })
+        .getByRole('button', { name: 'Discard changes' })
+        .click();
+      if (width < 800) {
+        await expect(recipe.locator('.panel-layout')).toHaveAttribute('data-view', 'index');
+        await expect(recipe.getByRole('link', { name: 'Coach', exact: true })).toBeFocused();
+      } else {
+        await expect(page).toHaveURL(/\?settings=notifications$/);
+        await expect(recipe.getByRole('heading', { name: 'Notifications', exact: true })).toBeFocused();
+      }
+      await expectFocusPlaced(page);
+    });
+  });
+}
+
+test('the recipe fits a phone at 320 and 375 with no sideways scroll, in every section', async ({ page }) => {
+  for (const width of [320, 375]) {
+    await page.setViewportSize({ width, height: 800 });
+    const recipe = await visitSettings(page);
+    expect(await sideways(page), `the index at ${String(width)}`).toBe(0);
+    for (const { key } of await settingsSections(recipe)) {
+      await visitSettings(page, key);
+      expect(await sideways(page), `${key} at ${String(width)}`).toBe(0);
+    }
+  }
+});
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`the settings recipe alone has no axe violations at its index and in Coach, in ${theme}`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: theme });
+    for (const section of [undefined, 'coach']) {
+      await visitSettings(page, section);
+      const { violations } = await new AxeBuilder({ page })
+        .include('.stage:has(nav.panel-nav[aria-label="Settings"])')
+        .options({ rules: { 'label-content-name-mismatch': { enabled: true } } })
+        .analyze();
+      expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual(
+        [],
+      );
+    }
+  });
+}

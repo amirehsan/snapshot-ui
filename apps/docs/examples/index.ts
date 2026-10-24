@@ -188,6 +188,7 @@ import SelectBasic from './select-basic';
 import SelectDetails from './select-details';
 import SelectFilter from './select-filter';
 import SelectStates from './select-states';
+import SettingsRecipe from './settings-recipe';
 import SheetBasic from './sheet-basic';
 import SheetMore from './sheet-more';
 import SheetSnapPoints from './sheet-snap-points';
@@ -422,6 +423,7 @@ export const examples = {
   'select-details': SelectDetails,
   'select-filter': SelectFilter,
   'select-states': SelectStates,
+  'settings-recipe': SettingsRecipe,
   'sheet-basic': SheetBasic,
   'sheet-more': SheetMore,
   'sheet-snap-points': SheetSnapPoints,

@@ -127,6 +127,86 @@ A section is one column of cards. Where two cards belong side by side, a PanelRo
 
 <Section>
 
+## The Settings recipe
+
+An app's Settings page, built from the library's parts. The example below is one client component, since this site is static: the open section is `?settings=` on this page's URL, read with `useSearchParams` inside a `Suspense` and opened through a [RouterProvider](/docs/routing) whose `navigate` asks before it leaves a section with unsaved changes. The sections come from one array, in your order: nothing counts them, the first is the index's default, and a reorder of the array reorders the page.
+
+- **Coach.** A card holds the wait tiers, a [Repeater](/docs/components/repeater) of an "Up to" amount and a wait, from none, with its empty line, to three, where Add stays drawn, disabled, with its reason. An amount another tier already waits from is a row error. Under the set, [FieldExtras](/docs/components/field-extras) with `scope="group"` offers the default tiers, and Reset to default focuses the first amount. A second card holds the cushion, empty by default, with a suggestion to use. Save drops the rows whose fields are all empty and sorts the rest by amount, and Cancel puts the saved tiers back.
+- **Notifications.** Push amounts, off by default, and the weekly email, on, whose [ConditionalFields](/docs/components/conditional-fields) hold its status line and Send a test.
+- **Bank sync.** A [DescriptionList](/docs/components/description-list) of the two connections and their states; "2 connected" is the end state in the nav.
+- **AI assistant.** A password field for the key and the model, with the default offered.
+- **Logos.** A switch gates the provider and its key. Hidden, they stay in the page and are never sent: the save reads the form's `FormData`, where an absent field means "unchanged". The setup address has a [CopyButton](/docs/components/copy-button) in its row's actions, and the nav's end state says Off or On.
+- **Appearance.** A [ThemeSwitch](/docs/components/theme-switch), applied at once, outside every SaveBar and never Changed. Here it sets this site's theme.
+- **Data** and **Danger zone.** Export in a card's actions; Delete all data is a danger Button in a plain card, asking with a [ConfirmDialog](/docs/components/confirm-dialog) in the danger tone. No card is red: error means a failure or an invalid value.
+
+Each section with fields ends with a [SaveBar](/docs/components/save-bar). While it is dirty, a link to another section asks first with `useConfirm`, and focus goes back to the link if you keep editing, or to the next section's heading if you discard.
+
+```tsx
+// The page's router: every link of the layout goes through it.
+const { confirm, dialog } = useConfirm();
+
+<RouterProvider
+  navigate={async (href) => {
+    if (dirtySection !== null) {
+      const isSure = await confirm({
+        tone: 'danger',
+        title: 'Discard changes?',
+        description: `The changes you made in ${dirtySection.name} will be lost.`,
+        confirmLabel: 'Discard changes',
+        cancelLabel: 'Keep editing',
+      });
+      if (!isSure) return;
+      // Once the dialog has given focus back to the link, so the next section's heading takes it.
+      await focusBack();
+    }
+    router.push(href, { scroll: false });
+  }}
+>
+  {children}
+  {dialog}
+</RouterProvider>;
+```
+
+In an app, the settings layout and each section are server components, as [One address per section](#one-address-per-section) shows; only the leaves that hold state are client components: the layout's nav, each section's form with its SaveBar, the Repeater, the switches and the theme. Read the theme from your cookie in the root layout and write it in a server action, as [the theme switch page](/docs/components/theme-switch#no-flash-your-part-and-ours) shows. The rail's footer holds the [AccountMenu](/docs/components/account-menu), with Settings, the theme as a submenu, Help and Sign out.
+
+```tsx
+// app/layout.tsx, a server component: the shell, with the person's menu in the rail's footer.
+<AppShell sidebar={<AppNav footer={<PersonMenu name={person.name} detail={person.email} />} />}>
+  {children}
+</AppShell>
+
+// app/person-menu.tsx
+'use client';
+
+import { AccountMenu, MenuItem, MenuSeparator, ThemeMenu } from '@snapshot-ui/react';
+import { useTheme } from './theme-provider';
+
+export function PersonMenu({ name, detail }: { name: string; detail: string }) {
+  const [theme, setTheme] = useTheme();
+  return (
+    <AccountMenu name={name} detail={detail}>
+      <MenuItem id="settings" href="/settings">
+        Settings
+      </MenuItem>
+      <ThemeMenu value={theme} onChange={setTheme} />
+      <MenuItem id="help" href="/help">
+        Help
+      </MenuItem>
+      <MenuSeparator />
+      <MenuItem id="sign-out" onAction={signOut}>
+        Sign out
+      </MenuItem>
+    </AccountMenu>
+  );
+}
+```
+
+<Preview name="settings-recipe" />
+
+</Section>
+
+<Section>
+
 ## Usage
 
 PanelLayout, PanelNav and PanelNavItem are client components, for their links and the focus move. PanelSection and PanelRow are static and render in a server component.

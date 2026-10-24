@@ -26,7 +26,7 @@ Charts are a separate package with their own versions.
 pnpm add @snapshot-ui/charts
 ```
 
-It needs React 19 and the same 0.x minor of `@snapshot-ui/core` (0.9 for charts 0.2.0), whose `styles.css` already draws the charts. It does not need React Aria. See the [Bar chart](/docs/charts/bar-chart), [Line chart](/docs/charts/line-chart) and [Sparkline](/docs/charts/sparkline) pages.
+It needs React 19 and the same 0.x minor of `@snapshot-ui/core` (0.10 for charts 0.2.1), whose `styles.css` already draws the charts. It does not need React Aria. See the [Bar chart](/docs/charts/bar-chart), [Line chart](/docs/charts/line-chart) and [Sparkline](/docs/charts/sparkline) pages.
 
 </Section>
 
@@ -142,7 +142,7 @@ export function PersianGuide({ children }) {
 
 ## Next.js server components
 
-Stateful or interactive components carry `'use client'`. Static ones do not, so a server component renders them with no client JavaScript: Heading, Text, Eyebrow, Kbd, Badge, Card, EmptyState, Skeleton, the field counter and chip, Meter, a StatTile without `href`, Sparkline, Pagination, ProgressBar, PageHeader, PageColumn, DescriptionList, CardActions, Gauge, MonthGrid, and Prose and ProseScroll. A server page builds Pagination's links with `getPageHref`, and only its controls and status are client components; its page size picker calls a function, so render Pagination from a client component to show it. Never import React Aria into a server component.
+Stateful or interactive components carry `'use client'`. Static ones do not, so a server component renders them with no client JavaScript: Heading, Text, Eyebrow, Kbd, Badge, Card, EmptyState, Skeleton, the field counter and chip, Meter, a StatTile without `href`, Sparkline, Pagination, ProgressBar, PageHeader, PageColumn, DescriptionList, CardActions, Gauge, MonthGrid, Prose and ProseScroll, and PanelSection and PanelRow. A server page builds Pagination's links with `getPageHref`, and only its controls and status are client components; its page size picker calls a function, so render Pagination from a client component to show it. Never import React Aria into a server component.
 
 Render Markdown into Prose in a server component, with `react-markdown` and `remark-gfm`, which add no client JavaScript there. Install both in your app, since the library depends on neither: `pnpm add react-markdown remark-gfm`. `remark-gfm` gives you the tables, footnotes, task lists and bare web addresses that model output and most reports use, which plain CommonMark does not parse. Text a model wrote takes `skipHtml` and a map that turns links and images into text; [Rendering Markdown safely](/docs/components/prose#rendering-markdown-safely) has the map, which also wraps each table in a ProseScroll.
 
@@ -151,6 +151,8 @@ BarChart and LineChart are client components that a server component renders wit
 DataTable and SidePanel are client components. DataTable takes functions in its props, its columns, `getKey` and `getRowHref`, so render it from a client component and pass it the rows your server page loaded. A SidePanel open in the URL is in the server's HTML beside the table; on a phone it opens as a sheet once scripts run.
 
 FileDropZone, PageDropZone, FileButton, UploadList, UploadTray, DatePicker, SaveBar and Breadcrumbs are client components. FileDropZone and DatePicker render their label, frame and button on the server; Breadcrumbs renders real links. Mount UploadTray once, in AppShell's `floating` slot in your root layout, so it outlives every page; the library never uploads, so give it your items.
+
+CopyButton, ConditionalFields, FieldExtras, Repeater, PanelLayout, PanelNav, PanelNavItem, ThemeSwitch, ThemeMenu and AccountMenu are client components, and each renders its whole face on the server: a Repeater its rows, PanelLayout both of its faces, a container query showing one, and ThemeSwitch the `value` you give it. A section's PanelSection and its PanelRows are static, so a settings page's sections render in server components with only their forms on the client.
 
 The date and number fields render their label, hint, error line and hidden inputs on the server. Their formatted text, which React Aria writes with `Intl`, appears from the first render after hydration. Before it, a number field shows its plain figure, a date range picker its `valueLabel`, and an inline calendar its empty frame. So the server's HTML is the same in every locale and time zone. Pass `today` from your user's time zone, and `valueLabel` where the server's HTML should show a range.
 

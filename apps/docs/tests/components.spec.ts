@@ -2288,15 +2288,27 @@ const NESTED_SHELL: Record<string, string> = {
 };
 const NESTED_RULES = ['landmark-no-duplicate-main', 'landmark-main-is-top-level', 'landmark-unique'];
 
+/**
+ * The pages whose examples draw one page twice, each with its reason. Two regions of one name, one per example,
+ * break only the rule that landmarks be unique; it is off on these pages alone, and the docs run checks the
+ * example that repeats the other with every rule on.
+ */
+const SAME_PAGE_TWICE: Record<string, string> = {
+  'panel-layout':
+    'the basic example and the Settings recipe each draw the settings page at its index, Coach beside the list, so two regions are named Coach; docs.spec.ts checks the recipe alone',
+};
+
+/** The axe rules a page turns off, from the two lists above. */
+const rulesOff = (slug: string): string[] =>
+  slug in NESTED_SHELL ? NESTED_RULES : slug in SAME_PAGE_TWICE ? ['landmark-unique'] : [];
+
 for (const { slug, url } of PAGES) {
   for (const theme of ['light', 'dark'] as const) {
     test(`the ${slug} page has no axe violations in ${theme}`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: theme });
       await visit(page, url);
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
-      expect(await axeViolations(page, { disableRules: slug in NESTED_SHELL ? NESTED_RULES : [] })).toEqual(
-        [],
-      );
+      expect(await axeViolations(page, { disableRules: rulesOff(slug) })).toEqual([]);
     });
   }
 }
