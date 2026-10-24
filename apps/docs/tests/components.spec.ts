@@ -148,6 +148,30 @@ test.describe('forced colors', () => {
   const switchNamed = (page: Page, name: string): Locator =>
     page.locator('.switch').filter({ has: page.getByRole('switch', { name, exact: true }) });
 
+  test('a folded accordion keeps its rules, its chevron and its marker', async ({ page }) => {
+    await visit(page, '/docs/components/accordion');
+    const form = page.locator('.stage form').filter({ has: page.locator('.accordion') });
+    const folded = form.locator('.accordion-item').filter({ hasText: 'Notifications' });
+    // The digest address starts changed, so its folded section shows the marker once the page has hydrated.
+    const marker = folded.locator('.accordion-marker');
+    await expect(marker).toHaveCount(1);
+    const text = await systemColor(page, 'CanvasText');
+    // The rule between two items is drawn in the reader's text color, and so is the dot.
+    const rule = await paint(folded);
+    expect(rule.edge).toBe(text);
+    expect(await folded.evaluate((item) => getComputedStyle(item).borderTopStyle)).toBe('solid');
+    expect((await paint(marker)).fill).toBe(text);
+    // The chevron takes the toggle's color, which is not the page's.
+    const chevron = folded.locator('.accordion-chevron');
+    expect(await chevron.evaluate((icon) => getComputedStyle(icon).color)).toBe(
+      await folded.locator('.accordion-toggle').evaluate((toggle) => getComputedStyle(toggle).color),
+    );
+    expect(await chevron.evaluate((icon) => getComputedStyle(icon).color)).not.toBe(
+      await systemColor(page, 'Canvas'),
+    );
+    expect(await chevron.isVisible()).toBe(true);
+  });
+
   test('a switch tells on from off, and its thumb shows against its track', async ({ page }) => {
     await visit(page, '/docs/components/switch');
     const look = async (name: string) => {
@@ -1970,6 +1994,8 @@ const LONG = `https://example.com/${'segment'.repeat(12)}end`;
  * app, and never by the card the page is drawn in.
  */
 const LONG_TARGETS: Record<string, string[]> = {
+  // A title, its note and a section's text are the app's, and break inside the row rather than widen it.
+  accordion: ['.stage .accordion-toggle-text', '.stage .accordion-note', '.stage .accordion-body p'],
   // The person's name and detail are the app's and wrap at any character in the trigger, never widening the rail.
   'account-menu': ['.stage .account-menu-name', '.stage .account-menu-detail'],
   'app-shell': ['.stage .app-shell-main p'],
@@ -2331,6 +2357,8 @@ for (const { slug, url } of PAGES) {
  * Node; this proves the production build puts them in the page.
  */
 const SERVER_RENDERED: Record<string, string[]> = {
+  // Every title, its toggle and its chevron; the open sections with their content, the folded ones hidden.
+  accordion: ['.stage .accordion', '.stage .accordion-toggle', '.stage .accordion-chevron'],
   'account-menu': ['.stage .account-menu-trigger'],
   'app-shell': ['.stage .app-shell'],
   avatar: ['.stage .avatar', '.stage .avatar-initials'],
@@ -2932,5 +2960,38 @@ test.describe('panel layout', () => {
     await expect(layout).toHaveAttribute('data-view', 'section');
     await expect(phone.getByRole('heading', { name: 'Logos' })).toBeFocused();
     expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+  });
+});
+
+test.describe('the accordion', () => {
+  test('a folded accordion prints open', async ({ page }) => {
+    await visit(page, '/docs/components/accordion');
+    const accordion = page.locator('.stage .accordion').first();
+    const folds = accordion.locator(':scope > .accordion-item > .accordion-disclosure > .accordion-fold');
+    await expect(folds).toHaveCount(3);
+    // Two of the three are folded on screen, and hidden until found.
+    await expect(accordion.locator(':scope > .accordion-item:not([data-expanded])')).toHaveCount(2);
+    await page.emulateMedia({ media: 'print' });
+    for (const fold of await folds.all()) {
+      // Shown, at the full height of its body, with nothing clipped.
+      const heights = (): Promise<number[]> =>
+        fold.evaluate((element) => [
+          element.getBoundingClientRect().height,
+          element.firstElementChild?.scrollHeight ?? 0,
+        ]);
+      // Printing draws at once: the fold is at its full height with no transition to wait for.
+      const [box = 0, body = 0] = await heights();
+      expect(body).toBeGreaterThan(0);
+      expect(Math.abs(box - body)).toBeLessThanOrEqual(1);
+      await expect(fold.locator('p')).toBeVisible();
+    }
+    await expect(accordion.locator('.accordion-chevron').first()).toBeHidden();
+    expect(
+      await accordion
+        .locator('.accordion-chevron')
+        .evaluateAll((icons) => icons.map((icon) => getComputedStyle(icon).display)),
+    ).toEqual(['none', 'none', 'none']);
+    await page.emulateMedia({ media: 'screen' });
+    await expect(accordion.locator(':scope > .accordion-item:not([data-expanded])')).toHaveCount(2);
   });
 });

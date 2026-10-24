@@ -3094,6 +3094,14 @@ with forced colors emulated), so the forced-colors block draws it in
 | --- | --- | --- |
 | Clay | 6.81 | 6.82 |
 
+The same marker on a folded Accordion item stands on the page's Canvas, where
+a collapsible card never does, so from 0.11 that pair is gated at 3:1 too,
+"the folded accordion marker on canvas" (choices plan, Task 1):
+
+| Folded marker on Canvas | Light | Dark |
+| --- | --- | --- |
+| Clay | 6.20 | 7.57 |
+
 The dot carries meaning, and on a folded card it is the only thing a sighted
 reader sees of the change, so it is held to the 3:1 that WCAG 1.4.11 asks of
 such a graphic, and gated: the pair is in the contrast gate at 3:1, on Lifted,
@@ -13579,3 +13587,140 @@ spec's 2 kB budget: Avatar, Tooltip and Menu are most of it. The rule gives a
 detail, the folded trigger's name and tip. Not yet verified on a real iPhone
 and an Android phone at 320px to 430px (the AccountMenu in the drawer with
 its submenu), or in Windows' contrast themes (the open trigger's edge).
+
+## Accordion
+
+Sections that open and fold, each a heading whose button shows or hides a
+panel, on React Aria's `DisclosureGroup` (choices spec, section 5; plan Task
+1). It is new, so its derivation comes before it is built, as the parent spec
+asks.
+
+**Derived from CollapsibleCard, drawn as rows.** An accordion is several
+folds in one list, and CollapsibleCard is the library's one fold, measured in
+three engines, so the accordion takes its fold, its folded marker, its open
+on an invalid field and its find-in-page reveal whole. It does not take the
+card. A column of cards gives every section a frame, a header and actions,
+which is right for a settings page whose sections are cards, and stays the
+pattern there (ruling 5). A list of questions, or the sections of one long
+form, reads as one thing with rules between its parts, the DescriptionList's
+look: rows, a 1px `--color-divider` rule between two items, none above the
+first and none under the last, and no fill, edge or corner of its own. So an
+accordion ends flush at a card's padding, and an app frames one on the page
+with a Card. No row wash either: the row is not a surface, and a wash would
+need a corner in a holder's curve.
+
+**The row** is the Dense data row, `max(var(--size-target),
+var(--size-field))`: 48px, 40px compact, and 44px compact on a coarse
+pointer, above the 40px floor, the whole row the target. Its block padding
+centres one line of the title in it and grows the row when the title wraps.
+The title is at the body step and weight 500 in ink, the toggle's words; a
+long word breaks with `overflow-wrap: break-word`, set on the accordion and
+inherited, never `anywhere`, which would break a word in a holder that sizes
+the accordion by its content (settings plan, spec corrections 46 and 71).
+`RowHeights` measures 48px and 40px within a pixel, the first line centred
+and the chevron level with it, in three engines.
+
+**The note** sits a part step under the title, at the small step and 450 in
+slate, outside the toggle so the toggle's name is the title alone, as
+CollapsibleCard's is. It takes back the toggle's end padding and gives it
+again under itself, so a note adds its own line and a part step, no more.
+
+**The chevron** is CollapsibleCard's: 24px, slate, ink on hover where hover
+exists and on a press, level with the title's first line, at the row's end.
+Folded, it turns a quarter toward the title by `--card-chevron-turn`, which
+`card.css` sets from the nearest `dir`: 90deg left to right, -90deg right to
+left. A page that imports the stylesheets one by one imports `card.css` with
+`accordion.css`.
+
+**The fold** is CollapsibleCard's technique in the accordion's own selectors:
+the panel is a grid whose row moves between `1fr` and `0fr` over 200ms
+`ease`, the chevron's turn and the body's end padding moving with it, the
+body clipped only while folded or folding, and nothing moving while the item
+carries `data-instant`. `css.test.js` reads the duration and easing of both
+files' fold rows and fails if they differ, so the two cannot drift. Reduced
+motion stops all three. The body has the Card body's rhythm, 24px between
+peers in one column the panel's width, so fields in a panel take the same
+steps as fields in a card.
+
+**The item's own root.** CollapsibleCard's hooks mark `data-folding` on the
+fold's grandparent and listen there for `beforematch` and `invalid`. Were the
+item React Aria's `Disclosure` itself, that grandparent would be the
+accordion, and one item's fold would mark them all. So each item is
+`div.accordion-item` around the `Disclosure`, which holds the fold, the card's
+own shape, and the item reads its state from `DisclosureGroupStateContext`
+and runs the three hooks unchanged (plan open question 8). In single mode
+one press folds one item and opens another in one commit, and both move
+together (`SingleModeTogether`). A field that fails on submit opens only the
+item of the first field that failed, which is the field the browser focuses.
+
+**Several open by default** (ruling 1), where React Aria's own default is
+one: readers compare sections, and in single mode find-in-page or an invalid
+field would fold the section being read. Either way every item may fold.
+
+**The keys** (ruling 2). Arrow Down and Arrow Up move to the next and the
+previous enabled title of the same accordion, Home and End to the first and
+the last, with no wrap, and never open or fold anything. The handler is on
+the accordion and acts only on its own toggles, found by child combinators
+from its root, so a nested accordion keeps its arrows and a field in a panel
+keeps its own. React Aria's group passes on no key handler, so the
+accordion's element is drawn through the group's `render` with the handler
+on it (plan, spec correction 6).
+
+**Show all sections** (ruling 3), GOV.UK's words and state: a tertiary Button
+at the inline end above the first item, a part step above it. It opens every
+enabled item, then reads "Hide all sections" and folds them; a disabled item
+keeps the state it had (spec correction 8). It carries `aria-expanded` and
+`aria-controls` naming every panel, and keeps focus. The accordion finds its
+items among its children at render, so the server's HTML already holds the
+button's words, state and panels. Each panel's id is the accordion's, given
+to the panel's element through React Aria's `render`, since React Aria keeps
+an id given to a panel only where there is a DOM and a server would write its
+own (spec correction 4).
+
+**The folded marker** is CollapsibleCard's, in the accordion's classes, and
+reads the same: the title, collapsed, then Changed.
+
+**Focus.** An item that folds with focus in its panel gives focus to its
+toggle, CollapsibleCard's rule; `FoldWithFocusInside` finds no focus lost to
+the body in three engines. Show all keeps focus. The ring is the standard
+ring at `--radius-micro`, the title's ring, a text-sized part, which the
+concentric rule allows wherever it binds.
+
+**Printing** (ruling 6). Folded panels print open: under `print` the fold's
+row is `1fr`, the panel is shown over the user agent's rule for
+`hidden="until-found"` (`content-visibility: visible`), nothing transitions,
+and the chevrons and Show all are hidden. The docs' end-to-end run proves it
+in Chromium; WebKit's and Firefox's print previews are not yet verified, and
+an engine that will not show a folded panel prints the page as the screen
+shows it (risk R10).
+
+**Disabled.** A disabled item's title and chevron are taupe, with the
+not-allowed cursor and no hover, and its panel keeps the state it had; a
+disabled accordion disables every toggle and Show all.
+
+**Forced colors.** The rules are drawn in `canvastext`, the chevron takes the
+toggle's color, the marker is `canvastext`, and a disabled title is
+`graytext`; the docs' run reads all three in Chromium.
+
+**Contrast.** Gated already on lifted, in a card: ink 17.84 and 17.42, slate
+5.31 and 6.94, clay 6.81 and 6.82. On the canvas: ink 16.25 and 19.31, slate
+4.84 and 7.26, and clay 6.20 and 7.57, measured with `contrast.js`. Clay on
+canvas is newly gated at 3:1, since the dot carries meaning on the page too.
+A disabled title is taupe, exempt as disabled text.
+
+**Server rendering.** A client part. Every heading and toggle with
+`aria-expanded`, the open panels' content, the folded panels with `hidden=""`
+until hydration (CollapsibleCard's qualification for find-in-page), Show all
+and the marker of an item given `isChanged` are in the server's HTML, the
+same in every locale and zone.
+
+**The size.** `{ Accordion, AccordionItem }` measures 2.98 kB without React
+Aria, Lucide and `@internationalized/date`, inside the spec's 3 kB budget;
+the rule gives a 3.5 kB limit. With React Aria not ignored it measures
+16.38 kB.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): a toggle's name, state and "Changed" in that order, its
+heading level, its note in browse mode, and Show all with its state. Not yet
+verified in Safari's and Firefox's print preview, in Windows' contrast
+themes, or on phones at 320px to 430px.

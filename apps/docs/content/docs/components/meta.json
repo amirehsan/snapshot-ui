@@ -1,6 +1,7 @@
 {
   "title": "Components",
   "pages": [
+    "accordion",
     "account-menu",
     "app-shell",
     "avatar",

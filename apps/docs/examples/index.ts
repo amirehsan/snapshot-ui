@@ -1,4 +1,8 @@
 import type { ComponentType } from 'react';
+import AccordionBasic from './accordion-basic';
+import AccordionExpandAll from './accordion-expand-all';
+import AccordionForm from './accordion-form';
+import AccordionSingle from './accordion-single';
 import AccountMenuHeader from './account-menu-header';
 import AccountMenuRail from './account-menu-rail';
 import AccountsRecipe from './accounts-recipe';
@@ -234,6 +238,10 @@ import UploadListStatuses from './upload-list-statuses';
 
 /** Every example a page may show with <Preview name="..." />. */
 export const examples = {
+  'accordion-basic': AccordionBasic,
+  'accordion-expand-all': AccordionExpandAll,
+  'accordion-form': AccordionForm,
+  'accordion-single': AccordionSingle,
   'account-menu-header': AccountMenuHeader,
   'account-menu-rail': AccountMenuRail,
   'accounts-recipe': AccountsRecipe,

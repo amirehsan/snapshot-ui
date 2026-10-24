@@ -292,6 +292,24 @@ describe('src/styles.css', () => {
       previous = at(file);
     }
   });
+  it('imports the choices files after the settings files, each after the file it reads from', () => {
+    // The accordion is required; the tag input, the choice cards and the position pad are checked once they
+    // exist, in that order, each after the file it reads from (spec 12, plan open question 6).
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    expect(at('accordion.css')).toBeGreaterThan(at('account-menu.css'));
+    expect(at('accordion.css')).toBeGreaterThan(at('card.css'));
+    let previous = at('accordion.css');
+    for (const [file, reads] of /** @type {const} */ ([
+      ['tag-input.css', 'multi-select.css'],
+      ['choice-cards.css', 'radio.css'],
+      ['position-pad.css', 'segmented.css'],
+    ])) {
+      if (!components.includes(file)) continue;
+      expect(at(file), file).toBeGreaterThan(previous);
+      expect(at(file), `${file} after ${reads}`).toBeGreaterThan(at(reads));
+      previous = at(file);
+    }
+  });
 });
 
 describe.each(components)('src/components/%s', (file) => {
@@ -3624,7 +3642,7 @@ describe('src/components/tooltip.css', () => {
   // header, so the first match is the tip's own rule, and the later ones sit inside the two media blocks.
   const rules = () => closeUp(stripComments(read('src/components/tooltip.css')));
 
-  it('is the last overlay file imported, right after command-palette.css, with only the shell, home, picker, filter, data, documents and settings files after it', () => {
+  it('is the last overlay file imported, right after command-palette.css, with only the shell, home, picker, filter, data, documents, settings and choices files after it', () => {
     const entry = read('src/styles.css');
     const imported = [...entry.matchAll(/@import '\.\/components\/([^']+)';/g)].map((m) => m[1]);
     const tooltip = imported.indexOf('tooltip.css');
@@ -3667,6 +3685,10 @@ describe('src/components/tooltip.css', () => {
         'repeater.css',
         'panel-layout.css',
         'account-menu.css',
+        'accordion.css',
+        'tag-input.css',
+        'choice-cards.css',
+        'position-pad.css',
       ]).toContain(file);
     }
   });
@@ -10995,6 +11017,226 @@ describe('src/components/field-extras.css', () => {
       '.conditional-fields { border: 0; }',
     );
     expect(stripComments(source)).not.toMatch(/\b(transition|animation)\s*:/);
+  });
+});
+
+describe('src/components/accordion.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/accordion.css')));
+  /** Every rule that holds declarations, as its selector and its declarations, media blocks included. */
+  const all = () =>
+    [...rules().matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selector = '', body = '']) => ({
+      selector: selector.trim(),
+      body: body.trim(),
+    }));
+  const FOLDED = '.accordion-item:not([data-expanded]) > .accordion-disclosure';
+  /** The declarations after `header`, trimmed. */
+  const block = (css, header) => blockAfter(css, header).trim();
+
+  it('folds on a grid row with card.css duration and easing', () => {
+    const card = closeUp(stripComments(read('src/components/card.css')));
+    const cardFold = block(card, '.card-fold {');
+    const fold = block(rules(), '.accordion-fold {');
+    const transition = /transition: grid-template-rows ([^;]+);/;
+    expect(transition.exec(fold)?.[1]).toBe(transition.exec(cardFold)?.[1]);
+    expect(fold).toContain('grid-template-rows: 1fr;');
+    expect(fold).not.toContain('display');
+    expect(block(rules(), '.accordion-fold:not([hidden]) {')).toContain('display: grid;');
+    expect(block(rules(), `${FOLDED} > .accordion-fold {`)).toContain('grid-template-rows: 0fr;');
+    // The chevron and the body's end padding move with the row, in the same time.
+    const timing = /200ms ease/;
+    expect(timing.exec(cardFold)?.[0]).toBe('200ms ease');
+    expect(block(rules(), '.accordion-chevron {')).toContain('transition: rotate 200ms ease;');
+    expect(block(rules(), '.accordion-body {')).toContain('transition: padding-block-end 200ms ease;');
+    expect(block(rules(), `${FOLDED} > .accordion-fold > .accordion-body {`)).toContain(
+      'padding-block-end: 0;',
+    );
+    expect(rules()).not.toContain('visibility: hidden');
+  });
+
+  it('clips the body only while folded or folding, and moves nothing while data-instant', () => {
+    const clipping = all().filter(({ body }) => /(?:^|;\s*)overflow(?:-[xy])?\s*:/.test(body));
+    expect(clipping.map(({ selector }) => selector)).toEqual([
+      '.accordion-item:is(:not([data-expanded]), [data-folding]) > .accordion-disclosure > .accordion-fold > .accordion-body',
+      '.accordion-item > .accordion-disclosure > .accordion-fold > .accordion-body',
+    ]);
+    expect(clipping[0]?.body).toBe('overflow: hidden;');
+    // The second is the print block's, which shows every panel whole.
+    expect(block(rules(), '@media print')).toContain('overflow: visible;');
+    const instant = all().filter(({ selector }) => selector.includes('[data-instant]'));
+    expect(instant).toHaveLength(1);
+    expect(instant[0]?.body).toBe('transition: none;');
+    const stops = instant[0]?.selector.split(', ') ?? [];
+    for (const stop of stops)
+      expect(stop).toMatch(/^\.accordion-item\[data-instant\] > \.accordion-disclosure > /);
+    const moving = all().filter(
+      ({ body }) => /(?:^|;\s*)transition\s*:/.test(body) && !body.includes('transition: none'),
+    );
+    expect(moving.map(({ selector }) => selector)).toEqual([
+      '.accordion-chevron',
+      '.accordion-fold',
+      '.accordion-body',
+    ]);
+    for (const { selector } of moving) expect(stops.some((stop) => stop.endsWith(` ${selector}`))).toBe(true);
+  });
+
+  it('rules between items only, and draws no frame, fill or corner on the accordion', () => {
+    expect(block(rules(), '.accordion-item + .accordion-item {')).toBe(
+      'border-block-start: 1px solid var(--color-divider);',
+    );
+    const borders = all().filter(({ body }) => /(?:^|;\s*)border(?:-[a-z-]+)?\s*:/.test(body));
+    expect(borders.map(({ selector }) => selector)).toEqual([
+      '.accordion-item + .accordion-item',
+      '.accordion-toggle',
+      '.accordion-marker',
+      '.accordion-item + .accordion-item',
+    ]);
+    expect(block(rules(), '.accordion-toggle {')).toContain('border: 0;');
+    for (const part of ['.accordion {', '.accordion-item {']) {
+      const body = block(rules(), part);
+      expect(body, part).not.toMatch(/background|border|radius|box-shadow|padding/);
+    }
+    // No row wash: the row is not a surface, so nothing fills it on hover or press.
+    for (const { selector, body } of all()) {
+      if (selector.includes('accordion-toggle'))
+        expect(body, selector).not.toMatch(/background(?:-color)?: (?!none)/);
+    }
+  });
+
+  it('makes the row max(--size-target, --size-field) high with the title at the body step, weight 500', () => {
+    const item = block(rules(), '.accordion-item {');
+    expect(item).toContain('--accordion-row: max(var(--size-target), var(--size-field));');
+    expect(item).toContain('--accordion-pad: max(0px, calc((var(--accordion-row) - 1lh) / 2));');
+    expect(item).toContain('font-size: var(--text-body);');
+    expect(item).toContain('line-height: var(--text-body--line-height);');
+    const toggle = block(rules(), '.accordion-toggle {');
+    for (const declaration of [
+      'min-block-size: var(--accordion-row);',
+      'padding: var(--accordion-pad) 0;',
+      'inline-size: 100%;',
+      'align-items: flex-start;',
+      'font-weight: 500;',
+      'color: var(--color-ink);',
+      'cursor: pointer;',
+    ]) {
+      expect(toggle, declaration).toContain(declaration);
+    }
+    const text = block(rules(), '.accordion-toggle-text {');
+    expect(text).toContain('overflow-wrap: break-word;');
+    expect(text).toContain('min-inline-size: 0;');
+    // Never anywhere, which would break a word in a holder sized by its content (settings corrections 46, 71).
+    expect(rules()).not.toContain('anywhere');
+    expect(block(rules(), '.accordion-heading {')).toContain('margin: 0;');
+  });
+
+  it('sets the note at the small step in slate, a part step under the title', () => {
+    const note = block(rules(), '.accordion-note {');
+    expect(note).toContain('margin: calc(var(--spacing-part) - var(--accordion-pad)) 0 0;');
+    expect(note).toContain('padding-block-end: var(--accordion-pad);');
+    expect(note).toContain('font-size: var(--text-small);');
+    expect(note).toContain('font-weight: var(--text-small--font-weight);');
+    expect(note).toContain('color: var(--color-slate);');
+  });
+
+  it('turns the folded chevron by --card-chevron-turn, 90deg by default', () => {
+    expect(block(rules(), `${FOLDED} > .accordion-heading .accordion-chevron {`)).toBe(
+      'rotate: var(--card-chevron-turn, 90deg);',
+    );
+    // The turn is card.css's, which the nearest dir sets: this file sets none.
+    expect(rules()).not.toContain('--card-chevron-turn:');
+    const chevron = block(rules(), '.accordion-chevron {');
+    expect(chevron).toContain('margin-block: calc((1lh - 24px) / 2);');
+    expect(chevron).toContain('margin-inline-start: auto;');
+    expect(chevron).toContain('color: var(--color-slate);');
+  });
+
+  it('draws the folded marker as an 8px clay dot and keeps its room on a folded title', () => {
+    const dot = block(rules(), '.accordion-marker {');
+    for (const declaration of [
+      'position: absolute;',
+      'inline-size: 8px;',
+      'block-size: 8px;',
+      'border-radius: var(--radius-dot);',
+      'background-color: var(--color-clay);',
+    ]) {
+      expect(dot, declaration).toContain(declaration);
+    }
+    expect(block(rules(), `${FOLDED} > .accordion-heading .accordion-toggle-text {`)).toBe(
+      'margin-inline-end: calc(8px + var(--spacing-part));',
+    );
+  });
+
+  it('draws the ring, a taupe disabled toggle and Show all at the inline end', () => {
+    const ring = block(rules(), '.accordion-toggle:is(:focus-visible, [data-focus-visible]) {');
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: var(--focus-ring-offset);');
+    expect(block(rules(), '.accordion-toggle {')).toContain('border-radius: var(--radius-micro);');
+    const disabled = block(
+      rules(),
+      '.accordion-toggle:is(:disabled, [data-disabled]), .accordion-toggle:is(:disabled, [data-disabled]) .accordion-chevron {',
+    );
+    expect(disabled).toContain('color: var(--color-taupe);');
+    expect(disabled).toContain('cursor: not-allowed;');
+    const controls = block(rules(), '.accordion-controls {');
+    expect(controls).toContain('justify-content: flex-end;');
+    expect(controls).toContain('margin-block-end: var(--spacing-part);');
+  });
+
+  it('prints folded panels open with no chevron', () => {
+    const print = block(rules(), '@media print');
+    expect(block(print, '.accordion-fold, .accordion-fold[hidden] {')).toBe(
+      'display: grid; content-visibility: visible; transition: none;',
+    );
+    expect(block(print, `${FOLDED} > .accordion-fold {`)).toBe('grid-template-rows: 1fr;');
+    expect(block(print, '.accordion-chevron, .accordion-controls {')).toBe('display: none;');
+  });
+
+  it('keeps hover inside a hover media query and draws a forced-colors and a reduced-motion block', () => {
+    const css = rules();
+    const hover = blockAfter(css, '@media (hover: hover)');
+    expect(hover).toContain('.accordion-chevron { color: var(--color-ink); }');
+    const forced = blockAfter(css, FORCED_COLORS);
+    const outside = css
+      .replace(`@media (hover: hover) {${hover}}`, '')
+      .replace(`${FORCED_COLORS} {${forced}}`, '');
+    expect(outside).not.toContain(':hover');
+    // The press twin is outside it, since touch has no hover.
+    expect(outside).toContain(
+      '.accordion-toggle:is(:active, [data-pressed]):not(:disabled, [data-disabled]) .accordion-chevron {',
+    );
+    expect(forced).toContain('border-block-start-color: canvastext;');
+    expect(forced).toContain('color: inherit;');
+    expect(block(forced, '.accordion-marker {')).toBe('background-color: canvastext;');
+    expect(forced).toContain('color: graytext;');
+    const still = block(css, '@media (prefers-reduced-motion: reduce)');
+    expect(block(still, '.accordion-chevron, .accordion-fold, .accordion-body {')).toBe('transition: none;');
+  });
+
+  it('uses logical properties only', () => {
+    for (const { selector, body } of all()) {
+      expect(body, selector).not.toMatch(
+        /(?:margin|padding|border)-(?:left|right|top|bottom)|(?<![\w-])(?:left|right|top|bottom|width|height|min-width|min-height)\s*:/,
+      );
+    }
+  });
+});
+
+describe('the choices files', () => {
+  const FILES = ['accordion.css', 'tag-input.css', 'choice-cards.css', 'position-pad.css'].filter((file) =>
+    components.includes(file),
+  );
+
+  // An absolutely placed grid child whose end line is auto reaches the grid's padding edge, so a child placed
+  // by a start line names its span too (insights correction 20, lesson 9).
+  it.each(FILES)('names both lines for anything absolutely placed in a grid, in %s', (file) => {
+    const css = closeUp(stripComments(read(`src/components/${file}`)));
+    for (const [, selector = '', body = ''] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      if (!/(?:^|;\s*)position: absolute;/.test(body)) continue;
+      for (const [, line = ''] of body.matchAll(/grid-(?:row|column)(?:-start)?: ([^;]+);/g)) {
+        expect(line, selector.trim()).toMatch(/\/ span 1$|^1 \/ -1$/);
+      }
+      expect(body, selector.trim()).not.toMatch(/grid-(?:row|column)-start:/);
+    }
   });
 });
 

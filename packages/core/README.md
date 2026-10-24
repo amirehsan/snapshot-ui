@@ -33,6 +33,7 @@ Body text is set at weight 450, which only a variable font has. Load Sofia Sans 
 
 `styles.css` draws every component below, and `@snapshot-ui/react` supplies the markup that goes with each. Every name links to its page in the documentation, with examples, props, keyboard use and design rules.
 
+- [Accordion](https://snapshotui.com/docs/components/accordion)
 - [Account menu](https://snapshotui.com/docs/components/account-menu)
 - [App shell](https://snapshotui.com/docs/components/app-shell)
 - [Avatar](https://snapshotui.com/docs/components/avatar)

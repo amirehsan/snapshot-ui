@@ -1,6 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
+import { Accordion, AccordionItem } from '../src/accordion';
 import { AppShell } from '../src/app-shell';
 import { Button } from '../src/button';
 import { RangeCalendar } from '../src/calendar';
@@ -573,6 +574,28 @@ describe('an empty documents part slot', () => {
       const titles = container.querySelector('.page-header-titles');
       expect(titles?.childNodes).toHaveLength(1);
       expect(container.querySelector('.page-header-row')?.children).toHaveLength(1);
+      unmount();
+    }
+  });
+});
+
+describe('an empty choices part slot', () => {
+  it('draws no note for a note of false, null or an empty string', () => {
+    for (const empty of [false, null, '']) {
+      const { container, unmount } = render(
+        <Accordion>
+          <AccordionItem id="billing" title="Billing address" note={empty}>
+            12 Rose Lane
+          </AccordionItem>
+        </Accordion>,
+      );
+      expect(container.querySelector('.accordion-note')).toBeNull();
+      // The heading and the fold, and nothing between them.
+      expect(
+        [...(container.querySelector('.accordion-disclosure')?.children ?? [])].map(
+          (child) => child.className,
+        ),
+      ).toEqual(['accordion-heading', 'accordion-fold']);
       unmount();
     }
   });

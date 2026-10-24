@@ -801,6 +801,7 @@ export function HomePage(): ReactElement {
             <details className="footer-col" open>
               <summary>Components</summary>
               <div className="footer-links">
+                <Link href="/docs/components/accordion">Accordion</Link>
                 <Link href="/docs/components/account-menu">Account menu</Link>
                 <Link href="/docs/components/app-shell">App shell</Link>
                 <Link href="/docs/components/avatar">Avatar</Link>

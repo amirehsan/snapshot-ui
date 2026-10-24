@@ -3,6 +3,7 @@ import { House, Settings, ShoppingCart, User } from 'lucide-react';
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { I18nProvider, type Key } from 'react-aria-components';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
+import { Accordion, AccordionItem } from '../accordion';
 import { AppShell } from '../app-shell';
 import { Breadcrumb, Breadcrumbs } from '../breadcrumbs';
 import { Button } from '../button';
@@ -2698,5 +2699,73 @@ export const AccountMenuMirrored: Story = {
     await expect(rect(find(theme, '.menu-item-submenu')).left).toBeLessThan(
       rect(find(theme, '.menu-item-end')).left,
     );
+  },
+};
+
+/**
+ * Three Persian sections: each title at the right of its row and the chevron at the left end, the end of the row
+ * in right to left. Folded, the chevron turns toward the title, to the right, and the clay dot follows the title's
+ * last word to its left. Arrow Down still moves to the next title: the keys are up and down, which never mirror.
+ */
+export const AccordionMirrored: Story = {
+  tags: ['!no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" data-font="vazirmatn" style={{ width: 'min(32rem, calc(100vw - 2rem))' }}>
+        <Accordion defaultExpandedKeys={['billing']}>
+          <AccordionItem id="billing" title="نشانی صورت‌حساب">
+            <p>خیابان گل سرخ، پلاک ۱۲.</p>
+          </AccordionItem>
+          <AccordionItem
+            id="notifications"
+            title="اعلان‌ها"
+            note="ایمیل، اعلان و خلاصه‌ی هفتگی"
+            isChanged
+            changedLabel="تغییر کرده"
+          >
+            <p>رسیدها با ایمیل می‌آیند.</p>
+          </AccordionItem>
+          <AccordionItem id="danger" title="منطقه‌ی خطر">
+            <p>بستن حساب.</p>
+          </AccordionItem>
+        </Accordion>
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    await document.fonts.load('500 16px Vazirmatn', 'اعلان‌ها');
+    await document.fonts.ready;
+    const [open, folded] = [...canvasElement.querySelectorAll<HTMLElement>('.accordion-item')];
+    if (!open || !folded) throw new Error('Three items expected');
+    const toggle = rect(find(open, '.accordion-toggle'));
+    // The words start at the right of the row, and the chevron is at its left end.
+    await expectSameEdge(lastText(find(open, '.accordion-toggle-text')).right, toggle.right);
+    await expectSameEdge(rect(find(open, '.accordion-chevron')).left, toggle.left);
+    // Open, the chevron points down; folded, it turns a quarter toward the title, to the right.
+    await expect(getComputedStyle(find(open, '.accordion-chevron')).rotate).toBe('none');
+    await expect(getComputedStyle(find(folded, '.accordion-chevron')).rotate).toBe('-90deg');
+    // The dot follows the folded title's words a part step to their left, short of the chevron.
+    const dot = rect(find(folded, '.accordion-marker'));
+    await expectSameEdge(lastText(find(folded, '.accordion-toggle-text')).left - dot.right, 8);
+    await expect(dot.left).toBeGreaterThan(rect(find(folded, '.accordion-chevron')).right);
+    // The note starts at the right too, under the title.
+    await expectSameEdge(
+      lastText(find(folded, '.accordion-note')).right,
+      rect(find(folded, '.accordion-toggle')).right,
+    );
+    // Arrow Down moves to the next title, as it does left to right; End to the last.
+    const canvas = within(canvasElement);
+    const first = canvas.getByRole('button', { name: 'نشانی صورت‌حساب' });
+    await waitFor(() => {
+      if (document.activeElement !== first) first.focus();
+      return expect(first).toHaveFocus();
+    });
+    await userEvent.keyboard('{ArrowDown}');
+    const second = canvas.getByRole('button', { name: 'اعلان‌ها' });
+    await waitFor(() => expect(second).toHaveFocus());
+    await userEvent.keyboard('{End}');
+    await waitFor(() => expect(canvas.getByRole('button', { name: 'منطقه‌ی خطر' })).toHaveFocus());
+    // The shot shows the sections at rest, with no ring.
+    (document.activeElement as HTMLElement | null)?.blur();
   },
 };

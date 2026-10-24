@@ -1,0 +1,135 @@
+---
+title: Accordion
+description: Sections that open and fold, several at once, for a long form or a page of answers.
+icon: ListCollapse
+---
+
+<Section>
+
+## Accordion, CollapsibleCard or Tabs
+
+An accordion is a stack of rows. Each row is a title that shows or hides the section under it. Folding hides content, so use one only for what most readers can skip: answers to questions they may not have, or the sections of a long settings form that they visit one at a time. Content most readers need belongs on the page, open. GOV.UK's guidance is to test whether an accordion helps your readers before you add one.
+
+<Preview name="accordion-basic" />
+
+- When each section is a card with its own heading and actions, such as a Reset button, use a column of [CollapsibleCards](/docs/components/collapsible-card).
+- When a reader chooses one view among several, such as a chart or a table of the same data, use [Tabs](/docs/components/tabs).
+
+</Section>
+
+<Section>
+
+## One or several open
+
+Several items may stay open at once by default, so a reader can compare two sections, and find-in-page or a field that fails never closes the section they were reading. With `allowsMultipleExpanded={false}`, opening an item folds the one that was open, and the two move together. Either way a reader may fold every item.
+
+<Preview name="accordion-single" />
+
+</Section>
+
+<Section>
+
+## Show all sections
+
+`hasExpandAll` adds a "Show all sections" button above the items, at the end of the line. It opens every enabled item, then reads "Hide all sections" and folds them. A disabled item keeps the state it had. The button needs several items open at once, so with `allowsMultipleExpanded={false}` it is not drawn, and the accordion warns in development.
+
+<Preview name="accordion-expand-all" />
+
+The button finds the items among the accordion's own children, inside fragments and arrays too. An item wrapped in a component of your own still opens and folds, but the button leaves it out, and the accordion warns while `hasExpandAll` is on.
+
+</Section>
+
+<Section>
+
+## Sections of a form
+
+An accordion holds no value of its own. Fields in a folded section stay in the form and submit with it, since a hidden field still submits. A form's reset puts the fields back and leaves the sections as they are.
+
+<Preview name="accordion-form" />
+
+- A changed field in a folded section marks it with a clay dot after its title, as a folded [CollapsibleCard](/docs/components/collapsible-card) does. Pass `isChanged` to an item for a change no field reports.
+- A field in a folded section that fails the browser's validation on submit opens its section at once, before the field takes focus. With one item open at a time, only the section of the first field that failed opens.
+- With `validationBehavior="aria"` the browser fires no `invalid` event, so open the section yourself with `expandedKeys`.
+
+</Section>
+
+<Section>
+
+## Nested accordions
+
+An accordion inside an item works: each item follows its own accordion, and the arrow keys stay within the accordion they start in. Avoid it where you can, as GOV.UK and the Nielsen Norman Group advise. A heading inside the section usually serves the reader better than a second level of folding.
+
+</Section>
+
+<Section>
+
+## Printing
+
+Folded sections print open, with no chevrons and no Show all button, so a printed page of answers or settings has every section. In Chromium this is tested; in Safari and Firefox it is not yet verified, and if a browser will not print a folded section open, it prints the page as the screen shows it.
+
+</Section>
+
+<Section>
+
+## Usage
+
+Give every `AccordionItem` an `id`, which `defaultExpandedKeys`, `expandedKeys` and `onExpandedChange` use to name it. An item is folded unless its id is in one of them. Titles are `h3` by default; pass `level` from 2 to 6 to fit the page's outline, and the look stays the same. On a Persian page, pass `labels` for Show all's words and `changedLabel` on each item.
+
+```tsx
+import { Accordion, AccordionItem } from '@snapshot-ui/react';
+
+export function Settings() {
+  return (
+    <Accordion defaultExpandedKeys={['billing']} level={2}>
+      <AccordionItem id="billing" title="Billing address">
+        <p>12 Rose Lane, Bristol.</p>
+      </AccordionItem>
+      <AccordionItem id="notifications" title="Notifications" note="Email, push and digest settings">
+        <p>A weekly digest.</p>
+      </AccordionItem>
+    </Accordion>
+  );
+}
+```
+
+An accordion is a client component that a server component can render; the server's HTML holds every title, the open sections and their state. If you import the stylesheets one by one from `dist/components`, import `card.css` with `accordion.css`: the folded chevron's turn, which follows the page's direction, is set there.
+
+</Section>
+
+<Section>
+
+## Props
+
+Other HTML attributes, `className` and `ref` go on the accordion's root and on each item's root. `className` is merged after the library's classes.
+
+<PropsTable label="Accordion props" path="../../packages/react/src/accordion/Accordion.tsx" type="Pick<AccordionProps, 'children' | 'allowsMultipleExpanded' | 'defaultExpandedKeys' | 'expandedKeys' | 'onExpandedChange' | 'isDisabled' | 'level' | 'hasExpandAll' | 'labels' | 'className'>" />
+
+<PropsTable label="AccordionItem props" path="../../packages/react/src/accordion/Accordion.tsx" type="Pick<AccordionItemProps, 'id' | 'title' | 'note' | 'isDisabled' | 'isChanged' | 'changedLabel' | 'children' | 'className'>" />
+
+<PropsTable label="AccordionLabels" path="../../packages/react/src/accordion/Accordion.tsx" type="AccordionLabels" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+Each title is a heading that holds a button, so the sections appear in a screen reader's list of headings. The button reads the title, then expanded or collapsed, and names its section with `aria-controls`. The note sits under the heading, outside the button, so the button's name is the title alone. The chevron is decoration. Each section is a `group` named by its title, React Aria's default, rather than a `region`: a page of many questions would otherwise be a page of many landmarks.
+
+<Keys rows={[['Tab Shift+Tab', 'Moves through Show all, each title, and the content of open sections, in page order.'], ['Enter Space', 'On a title, opens or folds its section. On Show all, opens or folds every section.'], ['Down Up', 'On a title, moves to the next or previous enabled title of the same accordion, with no wrap.'], ['Home End', 'On a title, moves to the first or last enabled title.']]} />
+
+- When a section folds while focus is inside it, focus moves to its title. Show all keeps focus.
+- Find-in-page searches a folded section in browsers that support `hidden="until-found"`, and opens it at once at a match. The server's HTML hides a folded section completely until the page hydrates.
+- What a screen reader says for a folded, changed section, its heading level and its note is not yet verified on VoiceOver and NVDA.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps accordions in the system.
+
+<Rules dos={["Title each section in the reader's words, short enough for one line.", "Add a note when the title alone does not say what is inside.", "Let several sections stay open, so a reader can compare them."]} donts={['Never fold content most readers need. Put it on the page.', 'Never keep one section open at a time for long sections, where a reader loses their place.', 'Never nest an accordion where a heading would do.']} />
+
+</Section>
