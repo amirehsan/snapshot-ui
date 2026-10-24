@@ -9,7 +9,6 @@ import {
   Eyebrow,
   Heading,
   IconButton,
-  Input,
   SegmentedControl,
   SegmentedControlItem,
   Switch,
@@ -28,10 +27,15 @@ import { Orbit } from './orbit';
 
 const INSTALL = 'pnpm add @snapshot-ui/react @snapshot-ui/core';
 
+type AxisTheme = 'light' | 'dark';
+
 export function HomePage(): ReactElement {
   const { resolvedTheme, setTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  // The Theme axes specimen's own two attributes, apart from the page's theme and Corners.
+  const [axisTheme, setAxisTheme] = useState<AxisTheme>('light');
+  const [axisShape, setAxisShape] = useState<Shape>('rounded');
   // The Corners switch shows a value only the browser knows, so it settles after hydration.
   const mounted = useMounted();
   const shape = useShape();
@@ -469,180 +473,75 @@ export function HomePage(): ReactElement {
             </p>
           </div>
           <div className="axes">
-            <div className="axis-tile" data-theme="light" data-shape="rounded">
-              <div className="axis-label">
-                <span>Light</span>
-                <span>Rounded</span>
-              </div>
-              <Card className="stack">
-                <Input aria-label="Search settings" placeholder="Search settings" />
-                <div className="row spread">
-                  <Switch aria-label="Sample" defaultSelected />
-                  <div className="row">
-                    <IconButton variant="outline" aria-label="Call">
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
-                      </svg>
-                    </IconButton>
+            <div className="axes-controls">
+              <SegmentedControl
+                label="Theme"
+                name="axes-theme"
+                value={axisTheme}
+                onChange={(next) => {
+                  setAxisTheme(next as AxisTheme);
+                }}
+              >
+                <SegmentedControlItem value="light">Light</SegmentedControlItem>
+                <SegmentedControlItem value="dark">Dark</SegmentedControlItem>
+              </SegmentedControl>
+              <SegmentedControl
+                label="Shape"
+                name="axes-shape"
+                value={axisShape}
+                onChange={(next) => {
+                  setAxisShape(next as Shape);
+                }}
+              >
+                <SegmentedControlItem value="rounded">Rounded</SegmentedControlItem>
+                <SegmentedControlItem value="soft">Soft</SegmentedControlItem>
+                <SegmentedControlItem value="square">Square</SegmentedControlItem>
+              </SegmentedControl>
+              <pre className="axes-code">
+                <code>
+                  {'<section\n  data-theme="'}
+                  <b>{axisTheme}</b>
+                  {'"\n  data-shape="'}
+                  <b>{axisShape}</b>
+                  {'">'}
+                </code>
+              </pre>
+            </div>
+            <section
+              className="axes-stage"
+              aria-label="Specimen"
+              data-theme={axisTheme}
+              data-shape={axisShape}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle>Billing</CardTitle>
+                  <CardNote>Receipts and the plan your team is on.</CardNote>
+                </CardHeader>
+                <CardBody>
+                  <TextField label="Billing email" defaultValue="finance@northwind.studio" />
+                  <div className="settings-list">
+                    <div className="setting">
+                      <Switch description="One message per invoice." defaultSelected>
+                        Email receipts
+                      </Switch>
+                    </div>
+                  </div>
+                  <SegmentedControl label="Billing cycle" name="demo-cycle" defaultValue="yearly">
+                    <SegmentedControlItem value="monthly">Monthly</SegmentedControlItem>
+                    <SegmentedControlItem value="yearly">Yearly</SegmentedControlItem>
+                  </SegmentedControl>
+                  <div className="row push-end">
+                    <button className="button button-tertiary" type="button">
+                      Discard
+                    </button>
                     <button className="button" type="button">
-                      Book a visit
+                      Save changes
                     </button>
                   </div>
-                </div>
+                </CardBody>
               </Card>
-            </div>
-            <div className="axis-tile" data-theme="light" data-shape="soft">
-              <div className="axis-label">
-                <span>Light</span>
-                <span>Soft</span>
-              </div>
-              <Card className="stack">
-                <Input aria-label="Search settings" placeholder="Search settings" />
-                <div className="row spread">
-                  <Switch aria-label="Sample" defaultSelected />
-                  <div className="row">
-                    <IconButton variant="outline" aria-label="Call">
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
-                      </svg>
-                    </IconButton>
-                    <button className="button" type="button">
-                      Book a visit
-                    </button>
-                  </div>
-                </div>
-              </Card>
-            </div>
-            <div className="axis-tile" data-theme="light" data-shape="square">
-              <div className="axis-label">
-                <span>Light</span>
-                <span>Square</span>
-              </div>
-              <Card className="stack">
-                <Input aria-label="Search settings" placeholder="Search settings" />
-                <div className="row spread">
-                  <Switch aria-label="Sample" defaultSelected />
-                  <div className="row">
-                    <IconButton variant="outline" aria-label="Call">
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
-                      </svg>
-                    </IconButton>
-                    <button className="button" type="button">
-                      Book a visit
-                    </button>
-                  </div>
-                </div>
-              </Card>
-            </div>
-            <div className="axis-tile" data-theme="dark" data-shape="rounded">
-              <div className="axis-label">
-                <span>Dark</span>
-                <span>Rounded</span>
-              </div>
-              <Card className="stack">
-                <Input aria-label="Search settings" placeholder="Search settings" />
-                <div className="row spread">
-                  <Switch aria-label="Sample" defaultSelected />
-                  <div className="row">
-                    <IconButton variant="outline" aria-label="Call">
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
-                      </svg>
-                    </IconButton>
-                    <button className="button" type="button">
-                      Book a visit
-                    </button>
-                  </div>
-                </div>
-              </Card>
-            </div>
-            <div className="axis-tile" data-theme="dark" data-shape="soft">
-              <div className="axis-label">
-                <span>Dark</span>
-                <span>Soft</span>
-              </div>
-              <Card className="stack">
-                <Input aria-label="Search settings" placeholder="Search settings" />
-                <div className="row spread">
-                  <Switch aria-label="Sample" defaultSelected />
-                  <div className="row">
-                    <IconButton variant="outline" aria-label="Call">
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
-                      </svg>
-                    </IconButton>
-                    <button className="button" type="button">
-                      Book a visit
-                    </button>
-                  </div>
-                </div>
-              </Card>
-            </div>
-            <div className="axis-tile" data-theme="dark" data-shape="square">
-              <div className="axis-label">
-                <span>Dark</span>
-                <span>Square</span>
-              </div>
-              <Card className="stack">
-                <Input aria-label="Search settings" placeholder="Search settings" />
-                <div className="row spread">
-                  <Switch aria-label="Sample" defaultSelected />
-                  <div className="row">
-                    <IconButton variant="outline" aria-label="Call">
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
-                      </svg>
-                    </IconButton>
-                    <button className="button" type="button">
-                      Book a visit
-                    </button>
-                  </div>
-                </div>
-              </Card>
-            </div>
+            </section>
           </div>
         </section>
 
@@ -658,7 +557,7 @@ export function HomePage(): ReactElement {
             </p>
           </div>
           <div className="catalog">
-            <Card className="catalog-group">
+            <Card className="catalog-group" id="forms">
               <Eyebrow>Forms</Eyebrow>
               <div className="chips">
                 <Link className="chip" href="/docs/components/button">
@@ -691,10 +590,10 @@ export function HomePage(): ReactElement {
                 <Link className="chip" href="/docs/components/combo-box">
                   Combo box
                 </Link>
-                <span className="chip">Tag input</span>
+                <span className="chip chip-soon">Tag input</span>
               </div>
             </Card>
-            <Card className="catalog-group">
+            <Card className="catalog-group" id="dates-and-media">
               <Eyebrow>Dates and media</Eyebrow>
               <div className="chips">
                 <Link className="chip" href="/docs/components/date-picker">
@@ -703,24 +602,24 @@ export function HomePage(): ReactElement {
                 <Link className="chip chip-new" href="/docs/components/date-range-picker">
                   Date range picker
                 </Link>
-                <span className="chip">Time field</span>
-                <span className="chip">Color field</span>
-                <span className="chip">Icon picker</span>
-                <span className="chip">Media input</span>
-                <span className="chip chip-new">Slider</span>
-                <span className="chip">Rich text</span>
+                <span className="chip chip-soon">Time field</span>
+                <span className="chip chip-soon">Color field</span>
+                <span className="chip chip-soon">Icon picker</span>
+                <span className="chip chip-soon">Media input</span>
+                <span className="chip chip-soon">Slider</span>
+                <span className="chip chip-soon">Rich text</span>
               </div>
             </Card>
-            <Card className="catalog-group">
+            <Card className="catalog-group" id="lists-and-data">
               <Eyebrow>Lists and data</Eyebrow>
               <div className="chips">
                 <Link className="chip chip-new" href="/docs/components/data-table">
                   Data table
                 </Link>
-                <span className="chip">Sortable list</span>
-                <span className="chip">Tree builder</span>
-                <span className="chip">Master detail</span>
-                <span className="chip">Transfer list</span>
+                <span className="chip chip-soon">Sortable list</span>
+                <span className="chip chip-soon">Tree builder</span>
+                <span className="chip chip-soon">Master detail</span>
+                <span className="chip chip-soon">Transfer list</span>
                 <Link className="chip" href="/docs/components/stat-tile">
                   Stat tile
                 </Link>
@@ -732,7 +631,7 @@ export function HomePage(): ReactElement {
                 </Link>
               </div>
             </Card>
-            <Card className="catalog-group">
+            <Card className="catalog-group" id="overlays-and-shell">
               <Eyebrow>Overlays and shell</Eyebrow>
               <div className="chips">
                 <Link className="chip" href="/docs/components/dialog">
@@ -762,6 +661,7 @@ export function HomePage(): ReactElement {
               </div>
             </Card>
           </div>
+          <p className="catalog-legend">Dashed chips are on the roadmap. Everything else has a page.</p>
         </section>
 
         <section className="cta">
@@ -801,73 +701,11 @@ export function HomePage(): ReactElement {
             <details className="footer-col" open>
               <summary>Components</summary>
               <div className="footer-links">
-                <Link href="/docs/components/account-menu">Account menu</Link>
-                <Link href="/docs/components/app-shell">App shell</Link>
-                <Link href="/docs/components/avatar">Avatar</Link>
-                <Link href="/docs/components/badge">Badge</Link>
-                <Link href="/docs/components/bottom-tab-bar">Bottom tab bar</Link>
-                <Link href="/docs/components/breadcrumbs">Breadcrumbs</Link>
-                <Link href="/docs/components/button">Button</Link>
-                <Link href="/docs/components/calendar">Calendar</Link>
-                <Link href="/docs/components/card">Card</Link>
-                <Link href="/docs/components/checkbox">Checkbox</Link>
-                <Link href="/docs/components/collapsible-card">Collapsible card</Link>
-                <Link href="/docs/components/combo-box">Combo box</Link>
-                <Link href="/docs/components/command-palette">Command palette</Link>
-                <Link href="/docs/components/conditional-fields">Conditional fields</Link>
-                <Link href="/docs/components/confirm-dialog">Confirm dialog</Link>
-                <Link href="/docs/components/copy-button">Copy button</Link>
-                <Link href="/docs/components/data-table">Data table</Link>
-                <Link href="/docs/components/date-picker">Date picker</Link>
-                <Link href="/docs/components/date-range-picker">Date range picker</Link>
-                <Link href="/docs/components/description-list">Description list</Link>
-                <Link href="/docs/components/dialog">Dialog</Link>
-                <Link href="/docs/components/drawer">Drawer</Link>
-                <Link href="/docs/components/empty-state">Empty state</Link>
-                <Link href="/docs/components/field">Field parts</Link>
-                <Link href="/docs/components/field-extras">Field extras</Link>
-                <Link href="/docs/components/file-drop-zone">File drop zone</Link>
-                <Link href="/docs/components/filter-bar">Filter bar</Link>
-                <Link href="/docs/components/filter-chip">Filter chip</Link>
-                <Link href="/docs/components/gauge">Gauge</Link>
-                <Link href="/docs/components/icon-button">Icon button</Link>
-                <Link href="/docs/components/kbd">Kbd</Link>
-                <Link href="/docs/components/link">Link</Link>
-                <Link href="/docs/components/menu">Menu</Link>
-                <Link href="/docs/components/meter">Meter</Link>
-                <Link href="/docs/components/month-grid">Month grid</Link>
-                <Link href="/docs/components/multi-select">Multi-select</Link>
-                <Link href="/docs/components/number-field">Number field</Link>
-                <Link href="/docs/components/page-header">Page header</Link>
-                <Link href="/docs/components/pagination">Pagination</Link>
-                <Link href="/docs/components/panel-layout">Panel layout</Link>
-                <Link href="/docs/components/popover">Popover</Link>
-                <Link href="/docs/components/progress-bar">Progress bar</Link>
-                <Link href="/docs/components/prose">Prose</Link>
-                <Link href="/docs/components/radio-group">Radio group</Link>
-                <Link href="/docs/components/repeater">Repeater</Link>
-                <Link href="/docs/components/save-bar">Save bar</Link>
-                <Link href="/docs/components/search-field">Search field</Link>
-                <Link href="/docs/components/segmented-control">Segmented control</Link>
-                <Link href="/docs/components/select">Select</Link>
-                <Link href="/docs/components/sheet">Sheet</Link>
-                <Link href="/docs/components/side-panel">Side panel</Link>
-                <Link href="/docs/components/sidebar">Sidebar</Link>
-                <Link href="/docs/components/skeleton">Skeleton</Link>
-                <Link href="/docs/components/spinner">Spinner</Link>
-                <Link href="/docs/components/stat-tile">Stat tile</Link>
-                <Link href="/docs/components/switch">Switch</Link>
-                <Link href="/docs/components/tabs">Tabs</Link>
-                <Link href="/docs/components/theme-switch">Theme switch</Link>
-                <Link href="/docs/components/text-area">Text area</Link>
-                <Link href="/docs/components/text-field">Text field</Link>
-                <Link href="/docs/components/toast">Toast</Link>
-                <Link href="/docs/components/tooltip">Tooltip</Link>
-                <Link href="/docs/components/typography">Typography</Link>
-                <Link href="/docs/components/upload-tray">Upload tray</Link>
-                <Link href="/docs/charts/bar-chart">Bar chart</Link>
-                <Link href="/docs/charts/line-chart">Line chart</Link>
-                <Link href="/docs/charts/sparkline">Sparkline</Link>
+                <Link href="/#forms">Forms</Link>
+                <Link href="/#dates-and-media">Dates and media</Link>
+                <Link href="/#lists-and-data">Lists and data</Link>
+                <Link href="/#overlays-and-shell">Overlays and shell</Link>
+                <Link href="/docs/charts/bar-chart">Charts</Link>
               </div>
             </details>
             <details className="footer-col" open>

@@ -1,0 +1,1517 @@
+<!doctype html>
+<html lang="en" data-theme="light" data-shape="rounded">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v2 Snapshot UI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Sofia+Sans:wght@400..700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./mockup.css" />
+    <style>
+      @layer components {
+        .page {
+          max-width: 1280px;
+          margin: 0 auto;
+          padding: 0 48px;
+        }
+
+        /* ---- Floating nav pill ----------------------------------------- */
+        .nav-wrap {
+          position: sticky;
+          top: 24px;
+          z-index: 20;
+          padding: 0 48px;
+        }
+
+        .nav {
+          display: flex;
+          align-items: center;
+          gap: 40px;
+          max-width: 1184px;
+          margin: 0 auto;
+          padding: 10px 12px 10px 28px;
+          border: 1px solid var(--color-hairline);
+          border-radius: var(--radius-pill);
+          background-color: color-mix(in srgb, var(--color-float) 88%, transparent);
+          box-shadow: var(--shadow-lift);
+          backdrop-filter: blur(16px) saturate(140%);
+          transition: border-radius 200ms ease;
+        }
+
+        .brand {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 1.125rem;
+          font-weight: 500;
+          letter-spacing: -0.03em;
+        }
+
+        .brand svg {
+          width: 26px;
+          height: 26px;
+        }
+
+        .nav-links {
+          display: flex;
+          gap: 36px;
+          margin-right: auto;
+          font-weight: 500;
+          letter-spacing: -0.02em;
+        }
+
+        .nav-links a {
+          color: var(--color-slate);
+        }
+
+        .nav-links a:hover,
+        .nav-links a[aria-current='page'] {
+          color: var(--color-ink);
+        }
+
+        .nav-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        /* ---- Hero ------------------------------------------------------ */
+        .hero {
+          display: grid;
+          grid-template-columns: 1.25fr 1fr;
+          gap: 64px;
+          align-items: end;
+          padding: 120px 0 56px;
+        }
+
+        .hero h1 {
+          margin-top: 24px;
+        }
+
+        /* v2: headings fill their column and balance their lines instead of stopping at a ch cap, which in
+           this face is far narrower than it reads. Ledes avoid a lone last word. */
+        h1,
+        h2,
+        h3 {
+          text-wrap: balance;
+        }
+
+        .lede,
+        .portrait h3 {
+          text-wrap: pretty;
+        }
+
+        /* The old caps, for comparing in the mockup toolbar. */
+        .old-headings :is(h1, h2, h3) {
+          text-wrap: wrap;
+        }
+
+        .old-headings .hero h1 {
+          max-width: 11ch;
+        }
+
+        .old-headings .section-head h2 {
+          max-width: 16ch;
+        }
+
+        .old-headings .footer h2 {
+          max-width: 18ch;
+        }
+
+        .hero-side {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 28px;
+          padding-bottom: 10px;
+        }
+
+        .lede {
+          color: var(--color-charcoal);
+          font-size: 1.1875rem;
+          line-height: 1.5;
+          max-width: 44ch;
+        }
+
+        .install {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 6px 6px 6px 22px;
+          border: 1px solid var(--color-frame);
+          border-radius: var(--radius-pill);
+          background-color: var(--color-float);
+          font-family: var(--font-mono);
+          font-size: 0.875rem;
+          color: var(--color-charcoal);
+          transition: border-radius 200ms ease;
+        }
+
+        .install b {
+          color: var(--color-slate);
+          font-weight: 400;
+        }
+
+        .shape-switch {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+
+        /* ---- Stadium hero frame -------------------------------------- */
+        .frame {
+          position: relative;
+          display: grid;
+          grid-template-columns: 1fr 1.1fr;
+          gap: 28px;
+          align-items: start;
+          padding: 56px;
+          border: 1px solid var(--color-hairline);
+          border-radius: var(--radius-stadium);
+          background-color: var(--color-canvas);
+          box-shadow: var(--shadow-float);
+          overflow: hidden;
+          transition: border-radius 200ms ease;
+        }
+
+        .frame-light {
+          background-color: #2b2b2a;
+        }
+
+        .frame .card {
+          box-shadow: var(--shadow-float);
+        }
+
+        .frame-arc {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+        }
+
+        .toast {
+          position: absolute;
+          right: 56px;
+          bottom: 40px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 14px 18px 14px 16px;
+          border: 1px solid var(--color-frame);
+          border-radius: var(--radius-surface);
+          background-color: var(--color-float);
+          box-shadow: var(--shadow-float);
+          font-weight: 500;
+          transition: border-radius 200ms ease;
+        }
+
+        .toast-dot {
+          display: grid;
+          place-items: center;
+          width: 24px;
+          height: 24px;
+          border-radius: var(--radius-dot);
+          background-color: var(--color-success);
+          color: var(--color-canvas);
+        }
+
+        .toast-dot svg {
+          width: 14px;
+          height: 14px;
+        }
+
+        /* ---- Section heads -------------------------------------------- */
+        .section {
+          padding: 128px 0 0;
+        }
+
+        .section-head {
+          display: grid;
+          grid-template-columns: 1.25fr 1fr;
+          gap: 64px;
+          align-items: end;
+          margin-bottom: 56px;
+        }
+
+        .section-head h2 {
+          margin-top: 20px;
+        }
+
+        /* ---- Orbit: circular portraits ---------------------------------- */
+        .orbit {
+          position: relative;
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 48px;
+        }
+
+        .orbit-arc {
+          position: absolute;
+          left: -48px;
+          right: -48px;
+          top: -40px;
+          height: 420px;
+          width: calc(100% + 96px);
+          pointer-events: none;
+        }
+
+        /* v2: every portrait gives its circle the same 400px band, so the three captions start on one
+           line; only the middle circle drops to the foot of its band, as the docs site draws it. */
+        .portrait {
+          position: relative;
+          display: grid;
+          grid-template-rows: 400px;
+          align-content: start;
+          justify-items: start;
+          gap: 18px;
+        }
+
+        .portrait:nth-child(3) .portrait-circle {
+          align-self: end;
+        }
+
+        .portrait-circle {
+          position: relative;
+          display: grid;
+          place-items: center;
+          width: 280px;
+          height: 280px;
+          border-radius: var(--radius-dot);
+          background-color: var(--color-lifted);
+          box-shadow: var(--shadow-float);
+        }
+
+        .portrait-glyph {
+          font-size: 6rem;
+          font-weight: 500;
+          letter-spacing: -0.04em;
+          line-height: 1;
+        }
+
+        .satellite {
+          position: absolute;
+          right: 6px;
+          bottom: 22px;
+          display: grid;
+          place-items: center;
+          width: 56px;
+          height: 56px;
+          border-radius: var(--radius-dot);
+          background-color: #ffffff;
+          color: #141413;
+          box-shadow: var(--shadow-lift);
+        }
+
+        .satellite svg {
+          width: 20px;
+          height: 20px;
+        }
+
+        .portrait p {
+          max-width: 34ch;
+        }
+
+        .shape-stack {
+          position: relative;
+          width: 140px;
+          height: 120px;
+        }
+
+        .shape-stack span {
+          position: absolute;
+          width: 96px;
+          height: 72px;
+          border: 1.5px solid var(--color-ink);
+          background-color: var(--color-float);
+        }
+
+        .shape-stack span:nth-child(1) {
+          left: 0;
+          top: 0;
+          border-radius: 36px;
+        }
+
+        .shape-stack span:nth-child(2) {
+          left: 22px;
+          top: 24px;
+          border-radius: 12px;
+        }
+
+        .shape-stack span:nth-child(3) {
+          left: 44px;
+          top: 48px;
+          border-radius: 0;
+          background-color: var(--color-ink);
+        }
+
+        .contrast-glyph {
+          display: flex;
+          gap: 10px;
+        }
+
+        .contrast-glyph span {
+          display: grid;
+          place-items: center;
+          width: 76px;
+          height: 76px;
+          border-radius: var(--radius-dot);
+          font-size: 1.5rem;
+          font-weight: 700;
+        }
+
+        .contrast-glyph span:first-child {
+          background-color: var(--color-ink);
+          color: var(--color-canvas);
+        }
+
+        .contrast-glyph span:last-child {
+          border: 1.5px solid var(--color-ink);
+        }
+
+        /* ---- Theme axes grid ----------------------------------------- */
+        .axes {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 24px;
+        }
+
+        .axis-tile {
+          display: grid;
+          gap: 20px;
+          padding: 28px;
+          border: 1px solid var(--color-frame);
+          border-radius: var(--radius-stadium);
+          background-color: var(--color-canvas);
+          color: var(--color-ink);
+        }
+
+        .axis-tile .card {
+          padding: 22px;
+          border-radius: var(--radius-surface);
+        }
+
+        .axis-label {
+          display: flex;
+          justify-content: space-between;
+          font-size: var(--text-small);
+          color: var(--color-slate);
+          font-weight: 500;
+        }
+
+        /* ---- Catalog ---------------------------------------------------- */
+        .catalog {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 24px;
+        }
+
+        .catalog-group {
+          display: grid;
+          gap: 18px;
+          align-content: start;
+        }
+
+        .chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        /* ---- Watermark CTA -------------------------------------------- */
+        .cta {
+          position: relative;
+          margin-top: 128px;
+          padding: 112px 64px;
+          border-radius: var(--radius-stadium);
+          background-color: var(--color-lifted);
+          overflow: hidden;
+          transition: border-radius 200ms ease;
+        }
+
+        .watermark {
+          position: absolute;
+          right: -20px;
+          bottom: -48px;
+          font-size: 14rem;
+          line-height: 1;
+          font-weight: 500;
+          letter-spacing: -0.04em;
+          color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+          pointer-events: none;
+          user-select: none;
+        }
+
+        .cta-inner {
+          position: relative;
+          display: grid;
+          gap: 28px;
+          max-width: 620px;
+        }
+
+        /* ---- Footer: ink in light, Deep Well in dark --------------------- */
+        .footer {
+          margin-top: 128px;
+          padding: 96px 0 120px;
+          background-color: #141413;
+          color: #ffffff;
+        }
+
+        [data-theme='dark'] .footer {
+          background-color: #050505;
+        }
+
+        .footer h2 {
+          max-width: 30ch;
+          margin-bottom: 72px;
+        }
+
+        .footer-cols {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 32px;
+          padding-bottom: 64px;
+        }
+
+        .footer-col {
+          display: grid;
+          gap: 14px;
+          align-content: start;
+          font-size: 0.875rem;
+        }
+
+        .footer-col summary {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 6px;
+          color: rgb(255 255 255 / 0.6);
+          font-size: 0.875rem;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          list-style: none;
+          pointer-events: none;
+        }
+
+        .footer-col summary::-webkit-details-marker {
+          display: none;
+        }
+
+        .footer-links {
+          display: grid;
+          gap: 14px;
+        }
+
+        .footer-col a {
+          color: rgb(255 255 255 / 0.85);
+        }
+
+        .footer-col a:hover {
+          color: #ffffff;
+        }
+
+        .footer-bottom {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding-top: 28px;
+          border-top: 1px solid rgb(255 255 255 / 0.18);
+          color: rgb(255 255 255 / 0.6);
+          font-size: 0.875rem;
+        }
+
+        .footer-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 16px;
+          border: 1px solid rgb(255 255 255 / 0.4);
+          border-radius: var(--radius-pill);
+          color: #ffffff;
+        }
+        .frame-card {
+          position: relative;
+        }
+
+        .frame-card-offset {
+          margin-top: 64px;
+        }
+
+        .row-end {
+          justify-content: flex-end;
+        }
+
+        .nav-menu {
+          display: none;
+        }
+
+        .nav-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 40;
+          display: flex;
+          flex-direction: column;
+          gap: 40px;
+          padding: 20px 16px 32px;
+          background-color: var(--color-canvas);
+        }
+
+        .nav-overlay[hidden] {
+          display: none;
+        }
+
+        .nav-overlay-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 4px 4px 4px 12px;
+        }
+
+        .nav-overlay-links {
+          display: grid;
+          gap: 20px;
+          padding: 0 12px;
+        }
+
+        .nav-overlay .button {
+          margin: auto 12px 0;
+        }
+
+        /* ---- Tablet: 768 to 1023 ------------------------------------------ */
+        @media (width < 1024px) {
+          .page,
+          .nav-wrap {
+            padding-inline: 32px;
+          }
+
+          .nav {
+            gap: 16px;
+            padding-left: 20px;
+          }
+
+          .nav-links {
+            display: none;
+          }
+
+          .nav-actions {
+            margin-left: auto;
+          }
+
+          .nav-menu {
+            display: inline-grid;
+          }
+
+          .hero,
+          .section-head {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 28px;
+          }
+
+          .hero > *,
+          .section-head > * {
+            min-width: 0;
+          }
+
+          /* The arcs only work with the asymmetric desktop placement. */
+          .orbit-arc {
+            display: none;
+          }
+
+          .hero {
+            padding-top: 96px;
+          }
+
+
+          .frame {
+            grid-template-columns: 1fr;
+            padding: 32px;
+          }
+
+          .frame-card-offset {
+            margin-top: 0;
+          }
+
+          .toast {
+            position: relative;
+            right: auto;
+            bottom: auto;
+            justify-self: end;
+          }
+
+          .section {
+            padding-top: 96px;
+          }
+
+          .orbit {
+            grid-template-columns: repeat(2, 1fr);
+            row-gap: 64px;
+          }
+
+          .portrait {
+            grid-template-rows: none;
+          }
+
+          .portrait:nth-child(3) .portrait-circle {
+            align-self: auto;
+          }
+
+          .portrait-circle {
+            width: 240px;
+            height: 240px;
+          }
+
+          .axes {
+            grid-template-columns: repeat(2, 1fr);
+          }
+
+          .catalog {
+            grid-template-columns: 1fr;
+          }
+
+          .cta {
+            margin-top: 96px;
+            padding: 80px 40px;
+          }
+
+          .watermark {
+            font-size: 10rem;
+          }
+
+          .footer {
+            margin-top: 96px;
+            padding: 72px 0 96px;
+          }
+
+          .footer-cols {
+            grid-template-columns: repeat(2, 1fr);
+            row-gap: 48px;
+          }
+        }
+
+        /* ---- Phone: under 768 -------------------------------------------- */
+        @media (width < 768px) {
+          .page,
+          .nav-wrap {
+            padding-inline: 16px;
+          }
+
+          .nav-wrap {
+            top: 12px;
+          }
+
+          .nav {
+            padding: 6px 6px 6px 18px;
+          }
+
+          .nav-cta,
+          .nav-actions [aria-label='GitHub'],
+          .nav-actions [data-toggle-theme] {
+            display: none;
+          }
+
+          .hero {
+            padding: 64px 0 40px;
+          }
+
+          .lede {
+            font-size: 1.0625rem;
+          }
+
+          .hero .row .button {
+            flex: 1;
+          }
+
+          .install {
+            font-size: 0.8125rem;
+          }
+
+          .install > span {
+            min-width: 0;
+            overflow-x: auto;
+            white-space: nowrap;
+            scrollbar-width: none;
+          }
+
+          .shape-switch {
+            flex-wrap: wrap;
+            gap: 10px;
+          }
+
+          .frame {
+            gap: 16px;
+            padding: 16px;
+          }
+
+          .frame .card {
+            padding: 24px 20px;
+          }
+
+          .frame .card-header {
+            margin: 0 -20px 20px;
+            padding: 0 20px 20px;
+          }
+
+          .frame-arc,
+          .orbit-arc {
+            display: none;
+          }
+
+          .toast {
+            justify-self: stretch;
+          }
+
+          .section {
+            padding-top: 64px;
+          }
+
+          .section-head {
+            margin-bottom: 32px;
+          }
+
+          .orbit {
+            grid-template-columns: 1fr;
+            justify-items: center;
+            text-align: center;
+          }
+
+          .portrait {
+            justify-items: center;
+          }
+
+          .portrait-circle {
+            width: 220px;
+            height: 220px;
+          }
+
+          .portrait-glyph {
+            font-size: 4.5rem;
+          }
+
+          .axes {
+            grid-template-columns: 1fr;
+          }
+
+          .axis-tile {
+            padding: 20px;
+          }
+
+          .catalog .card {
+            padding: 24px;
+          }
+
+          .cta {
+            margin-top: 64px;
+            padding: 56px 24px;
+          }
+
+          .cta .row .button {
+            flex: 1;
+          }
+
+          .watermark {
+            font-size: 6rem;
+            bottom: -20px;
+          }
+
+          .footer {
+            margin-top: 64px;
+            padding: 56px 0 72px;
+          }
+
+          .footer h2 {
+            margin-bottom: 40px;
+          }
+
+          .footer-cols {
+            grid-template-columns: 1fr;
+            gap: 0;
+            padding-bottom: 40px;
+          }
+
+          .footer-col {
+            padding: 16px 0;
+            border-top: 1px solid rgb(255 255 255 / 0.18);
+          }
+
+          .footer-col summary {
+            margin: 0;
+            pointer-events: auto;
+            cursor: pointer;
+          }
+
+          .footer-col summary::after {
+            content: '+';
+            font-size: 1.25rem;
+            font-weight: 450;
+          }
+
+          .footer-col[open] summary::after {
+            content: '\2212';
+          }
+
+          .footer-col[open] summary {
+            margin-bottom: 14px;
+          }
+
+          .footer-bottom {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 16px;
+          }
+        }
+      }
+
+        /* ---- v2 Theme axes, option A: one live specimen -------------- */
+        .axes-live {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+          gap: 64px;
+          align-items: center;
+        }
+
+        .axes-controls {
+          display: grid;
+          gap: 28px;
+          align-content: start;
+        }
+
+        .axes-control {
+          display: grid;
+          gap: 10px;
+          justify-items: start;
+        }
+
+        .axes-control-label {
+          color: var(--color-slate);
+          font-size: var(--text-small);
+          font-weight: 500;
+        }
+
+        .axes-controls .code {
+          justify-self: stretch;
+          white-space: pre;
+        }
+
+        .axes-controls .code b {
+          color: var(--color-ink);
+          font-weight: 500;
+        }
+
+        /* The stage takes the chosen theme and shape itself, so the surface, the card and every
+           control in it change together. The card floats well clear of the stage's corners. */
+        .axes-stage {
+          display: grid;
+          place-items: center;
+          padding: 64px 56px;
+          border: 1px solid var(--color-frame);
+          border-radius: var(--radius-stadium);
+          background-color: var(--color-canvas);
+          color: var(--color-ink);
+          transition: border-radius 200ms ease, background-color 200ms ease;
+        }
+
+        .axes-stage .card {
+          width: 100%;
+          max-width: 440px;
+          box-shadow: var(--shadow-float);
+        }
+
+        .axes-stage .row-end {
+          justify-content: flex-end;
+        }
+
+        /* ---- v2 Theme axes, option B: a labeled matrix ----------------- */
+        .axes-matrix {
+          display: grid;
+          grid-template-columns: auto repeat(3, minmax(0, 1fr));
+          gap: 16px 24px;
+          align-items: center;
+        }
+
+        .axes-col,
+        .axes-row {
+          color: var(--color-slate);
+          font-size: var(--text-small);
+          font-weight: 500;
+        }
+
+        .axes-col {
+          padding-inline: 28px;
+        }
+
+        .axes-row {
+          padding-inline-end: 8px;
+        }
+
+        .axes-cell {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          min-height: 128px;
+          padding: 0 28px;
+          border: 1px solid var(--color-frame);
+          border-radius: var(--radius-stadium);
+          background-color: var(--color-canvas);
+          color: var(--color-ink);
+        }
+
+        [data-axes='a'] .axes-b,
+        [data-axes='b'] .axes-a {
+          display: none;
+        }
+
+        /* ---- v2 Catalog: chips with no page yet ----------------------- */
+        .chip-soon {
+          border-style: dashed;
+          background-color: transparent;
+          color: var(--color-slate);
+        }
+
+        .chip-soon:hover {
+          border-color: var(--color-frame);
+        }
+
+        .chip-soon::after {
+          content: 'Soon';
+          margin-left: 2px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+
+        .catalog-legend {
+          margin-top: 20px;
+          color: var(--color-slate);
+          font-size: var(--text-small);
+        }
+
+        /* ---- Mockup-only toolbar (not part of the design) --------------- */
+        .mock-bar {
+          position: fixed;
+          left: 24px;
+          bottom: 24px;
+          z-index: 50;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 12px 16px;
+          padding: 10px 12px 10px 18px;
+          border: 1px dashed var(--color-boundary);
+          border-radius: var(--radius-surface);
+          background-color: var(--color-float);
+          box-shadow: var(--shadow-float);
+          font-size: var(--text-small);
+        }
+
+        .mock-bar b {
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+
+        .mock-bar-group {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: var(--color-slate);
+        }
+
+        @media (width < 1024px) {
+          .axes-live {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 32px;
+          }
+
+          .axes-controls {
+            grid-template-columns: auto auto;
+            justify-content: start;
+            column-gap: 40px;
+          }
+
+          .axes-controls .code {
+            grid-column: 1 / -1;
+          }
+
+          .axes-col {
+            padding-inline: 16px;
+          }
+
+          .axes-cell {
+            flex-direction: column;
+            justify-content: center;
+            padding: 20px 12px;
+          }
+        }
+
+        @media (width < 768px) {
+          .axes-controls {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 20px;
+          }
+
+          .axes-stage {
+            padding: 32px 16px;
+          }
+
+          .axes-stage .card {
+            padding: 24px 20px;
+          }
+
+          .axes-matrix {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+          }
+
+          .axes-matrix > :first-child {
+            display: none;
+          }
+
+          .axes-col {
+            padding: 0;
+            text-align: center;
+          }
+
+          .axes-row {
+            grid-column: 1 / -1;
+            margin-top: 8px;
+          }
+
+          .axes-cell {
+            min-height: 112px;
+            padding: 16px 8px;
+            gap: 12px;
+          }
+
+          .axes-cell .button {
+            padding-inline: 14px;
+          }
+
+          .mock-bar {
+            left: 12px;
+            right: 12px;
+            bottom: 12px;
+          }
+        }
+    </style>
+  </head>
+  <body>
+    <div class="nav-wrap">
+      <nav class="nav" aria-label="Main">
+        <a class="brand" href="./home.html">
+          <svg viewBox="0 0 26 26" fill="none" aria-hidden="true">
+            <circle cx="13" cy="13" r="10" stroke="currentColor" stroke-width="2" />
+            <circle cx="21.5" cy="7" r="3.5" fill="var(--color-signal-light)" />
+          </svg>
+          snapshot ui
+        </a>
+        <div class="nav-links">
+          <a href="./component.html">Docs</a>
+          <a href="./component.html">Components</a>
+          <a href="./component.html#theming">Theming</a>
+          <a href="#">Changelog</a>
+        </div>
+        <div class="nav-actions">
+          <button class="icon-button icon-button-ghost" type="button" aria-label="Search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 5 5" /></svg>
+          </button>
+          <button class="icon-button icon-button-ghost" type="button" aria-label="Toggle dark mode" data-toggle-theme>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.2 8.2 0 0 1 9.5 4 8.2 8.2 0 1 0 20 14.5z" /></svg>
+          </button>
+          <a class="icon-button icon-button-ghost" href="#" aria-label="GitHub">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.6 9.6 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z" /></svg>
+          </a>
+          <a class="button nav-cta" href="./component.html">Get started</a>
+          <button class="icon-button icon-button-ghost nav-menu" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-overlay">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+          </button>
+        </div>
+      </nav>
+    </div>
+    <div class="nav-overlay" id="nav-overlay" hidden>
+      <div class="nav-overlay-head">
+        <span class="brand">
+          <svg viewBox="0 0 26 26" fill="none" aria-hidden="true"><circle cx="13" cy="13" r="10" stroke="currentColor" stroke-width="2" /><circle cx="21.5" cy="7" r="3.5" fill="var(--color-signal-light)" /></svg>
+          snapshot ui
+        </span>
+        <button class="icon-button nav-close" type="button" aria-label="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </div>
+      <nav class="nav-overlay-links" aria-label="Main">
+        <a class="type-h2" href="./component.html">Docs</a>
+        <a class="type-h2" href="./component.html">Components</a>
+        <a class="type-h2" href="./component.html#theming">Theming</a>
+        <a class="type-h2" href="#">Changelog</a>
+      </nav>
+      <a class="button button-large" href="./component.html">Get started</a>
+    </div>
+
+    <main class="page">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Component library</p>
+          <h1 class="type-h1">Calm interfaces for settings, dashboards and apps.</h1>
+        </div>
+        <div class="hero-side">
+          <p class="lede">
+            Snapshot UI is an accessible React library in a warm, editorial voice: cream surfaces, one typeface and
+            corners that round with intent. Plain HTML is next.
+          </p>
+          <div class="row">
+            <a class="button button-large" href="./component.html">Get started</a>
+            <a class="button button-secondary button-large" href="./component.html">Browse components</a>
+          </div>
+          <div class="install">
+            <span><b>$</b> pnpm add @snapshot-ui/react @snapshot-ui/core</span>
+            <button class="icon-button icon-button-ghost" type="button" aria-label="Copy install command">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>
+            </button>
+          </div>
+          <div class="shape-switch">
+            <span class="type-small muted">Corners</span>
+            <div class="segmented segmented-small" role="radiogroup" aria-label="Corners">
+              <label class="segmented-option"><input type="radio" name="shape" value="rounded" checked />Rounded</label>
+              <label class="segmented-option"><input type="radio" name="shape" value="soft" />Soft</label>
+              <label class="segmented-option"><input type="radio" name="shape" value="square" />Square</label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="frame" data-theme="dark" aria-label="Components at work">
+        <svg class="frame-arc" viewBox="0 0 1180 560" preserveAspectRatio="none" fill="none" aria-hidden="true">
+          <path d="M-20 470 C 260 300, 620 620, 1200 120" stroke="var(--color-signal-light)" stroke-width="1.5" />
+        </svg>
+        <div class="card frame-card" data-theme="light">
+          <div class="card-header">
+            <h3 class="type-h3">Notifications</h3>
+            <p class="muted">Where we reach you, and how often.</p>
+          </div>
+          <div class="settings-list">
+            <div class="setting">
+              <div>
+                <div class="type-h4">Product updates</div>
+                <div class="field-hint">A short note when something ships.</div>
+              </div>
+              <button class="switch" role="switch" aria-checked="true" aria-label="Product updates"></button>
+            </div>
+            <div class="setting">
+              <div>
+                <div class="type-h4">Weekly digest</div>
+                <div class="field-hint">Every Tuesday morning.</div>
+              </div>
+              <button class="switch" role="switch" aria-checked="false" aria-label="Weekly digest"></button>
+            </div>
+            <div class="setting">
+              <div>
+                <div class="type-h4">Security alerts</div>
+                <div class="field-hint">Always on for owners.</div>
+              </div>
+              <button class="switch" role="switch" aria-checked="true" aria-label="Security alerts"></button>
+            </div>
+          </div>
+        </div>
+        <div class="card frame-card frame-card-offset" data-theme="light">
+          <div class="card-header">
+            <h3 class="type-h3">Workspace</h3>
+            <p class="muted">Shown in the header and in every invite.</p>
+          </div>
+          <div class="stack">
+            <label class="field">
+              <span class="field-label">Workspace name <span class="field-marker">Changed</span></span>
+              <input class="input input-changed" value="Northwind Studio" />
+            </label>
+            <div class="field">
+              <span class="field-label">Theme</span>
+              <div class="segmented" role="radiogroup" aria-label="Theme">
+                <label class="segmented-option"><input type="radio" name="demo-theme" />Light</label>
+                <label class="segmented-option"><input type="radio" name="demo-theme" />Dark</label>
+                <label class="segmented-option"><input type="radio" name="demo-theme" checked />System</label>
+              </div>
+            </div>
+            <div class="row row-end">
+              <button class="button button-tertiary" type="button">Discard</button>
+              <button class="button" type="button">Save changes</button>
+            </div>
+          </div>
+        </div>
+        <div class="toast" data-theme="light" role="status">
+          <span class="toast-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 5 5 9-10" /></svg></span>
+          Saved. Your changes are live.
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Foundations</p>
+            <h2 class="type-h2">One voice, measured rather than chosen by eye.</h2>
+          </div>
+          <p class="lede">
+            Every color pairing is checked for contrast in both themes, every corner comes from one scale, and every
+            component is keyboard first.
+          </p>
+        </div>
+        <div class="orbit">
+          <svg class="orbit-arc" viewBox="0 0 1280 420" preserveAspectRatio="none" fill="none" aria-hidden="true">
+            <path d="M40 300 C 300 40, 520 420, 760 250 S 1180 60, 1290 200" stroke="var(--color-signal-light)" stroke-width="1.5" />
+          </svg>
+          <article class="portrait">
+            <div class="portrait-circle">
+              <span class="portrait-glyph">Aa</span>
+              <a class="satellite" href="#" aria-label="Typography">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+              </a>
+            </div>
+            <p class="eyebrow">Type</p>
+            <h3 class="type-h3">One family, at a body weight of 450.</h3>
+          </article>
+          <article class="portrait">
+            <div class="portrait-circle">
+              <div class="shape-stack"><span></span><span></span><span></span></div>
+              <a class="satellite" href="#" aria-label="Shape">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+              </a>
+            </div>
+            <p class="eyebrow">Shape</p>
+            <h3 class="type-h3">Rounded, Soft or Square, from one attribute.</h3>
+          </article>
+          <article class="portrait">
+            <div class="portrait-circle">
+              <div class="contrast-glyph"><span>Aa</span><span>Aa</span></div>
+              <a class="satellite" href="#" aria-label="Accessibility">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+              </a>
+            </div>
+            <p class="eyebrow">Access</p>
+            <h3 class="type-h3">WCAG 2.2 AA, built on React Aria.</h3>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Theme axes</p>
+            <h2 class="type-h2">Two switches. Every component follows.</h2>
+          </div>
+          <p class="lede">Set data-theme and data-shape on any element. A light card inside a dark page just works.</p>
+        </div>
+        <div class="axes-live axes-a">
+          <div class="axes-controls">
+            <div class="axes-control">
+              <span class="axes-control-label" id="axes-theme-label">Theme</span>
+              <div class="segmented" role="radiogroup" aria-labelledby="axes-theme-label">
+                <label class="segmented-option"><input type="radio" name="axes-theme" value="light" checked />Light</label>
+                <label class="segmented-option"><input type="radio" name="axes-theme" value="dark" />Dark</label>
+              </div>
+            </div>
+            <div class="axes-control">
+              <span class="axes-control-label" id="axes-shape-label">Shape</span>
+              <div class="segmented" role="radiogroup" aria-labelledby="axes-shape-label">
+                <label class="segmented-option"><input type="radio" name="axes-shape" value="rounded" checked />Rounded</label>
+                <label class="segmented-option"><input type="radio" name="axes-shape" value="soft" />Soft</label>
+                <label class="segmented-option"><input type="radio" name="axes-shape" value="square" />Square</label>
+              </div>
+            </div>
+            <pre class="code"><code>&lt;section
+  data-theme="<b data-axes-out="theme">light</b>"
+  data-shape="<b data-axes-out="shape">rounded</b>"&gt;</code></pre>
+          </div>
+          <div class="axes-stage" data-theme="light" data-shape="rounded" aria-label="Live specimen">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="type-h3">Billing</h3>
+                <p class="muted">Receipts and the plan your team is on.</p>
+              </div>
+              <div class="stack">
+                <label class="field">
+                  <span class="field-label">Billing email</span>
+                  <input class="input" value="finance@northwind.studio" />
+                </label>
+                <div class="settings-list">
+                  <div class="setting">
+                    <div>
+                      <div class="type-h4">Email receipts</div>
+                      <div class="field-hint">One message per invoice.</div>
+                    </div>
+                    <button class="switch" role="switch" aria-checked="true" aria-label="Email receipts"></button>
+                  </div>
+                </div>
+                <div class="field">
+                  <span class="field-label">Billing cycle</span>
+                  <div class="segmented" role="radiogroup" aria-label="Billing cycle">
+                    <label class="segmented-option"><input type="radio" name="demo-cycle" />Monthly</label>
+                    <label class="segmented-option"><input type="radio" name="demo-cycle" checked />Yearly</label>
+                  </div>
+                </div>
+                <div class="row row-end">
+                  <button class="button button-tertiary" type="button">Discard</button>
+                  <button class="button" type="button">Save changes</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="axes-matrix axes-b">
+          <span></span><span class="axes-col">Rounded</span><span class="axes-col">Soft</span><span class="axes-col">Square</span>
+          <span class="axes-row">Light</span>
+          <div class="axes-cell" data-theme="light" data-shape="rounded" aria-label="Light, Rounded"><button class="switch" role="switch" aria-checked="true" aria-label="Sample"></button><button class="button" type="button">Save</button></div>
+          <div class="axes-cell" data-theme="light" data-shape="soft" aria-label="Light, Soft"><button class="switch" role="switch" aria-checked="true" aria-label="Sample"></button><button class="button" type="button">Save</button></div>
+          <div class="axes-cell" data-theme="light" data-shape="square" aria-label="Light, Square"><button class="switch" role="switch" aria-checked="true" aria-label="Sample"></button><button class="button" type="button">Save</button></div>
+          <span class="axes-row">Dark</span>
+          <div class="axes-cell" data-theme="dark" data-shape="rounded" aria-label="Dark, Rounded"><button class="switch" role="switch" aria-checked="false" aria-label="Sample"></button><button class="button" type="button">Save</button></div>
+          <div class="axes-cell" data-theme="dark" data-shape="soft" aria-label="Dark, Soft"><button class="switch" role="switch" aria-checked="false" aria-label="Sample"></button><button class="button" type="button">Save</button></div>
+          <div class="axes-cell" data-theme="dark" data-shape="square" aria-label="Dark, Square"><button class="switch" role="switch" aria-checked="false" aria-label="Sample"></button><button class="button" type="button">Save</button></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Components</p>
+            <h2 class="type-h2">Everything a dashboard asks for.</h2>
+          </div>
+          <p class="lede">From a single switch to the whole app shell. Published as you build, at 0.x, from the first phase.</p>
+        </div>
+        <div class="catalog">
+          <div class="card catalog-group">
+            <p class="eyebrow">Forms</p>
+            <div class="chips">
+              <a class="chip" href="./component.html">Button</a><a class="chip" href="#">Icon button</a><a class="chip" href="#">Text field</a><a class="chip" href="#">Text area</a><a class="chip" href="#">Checkbox</a><a class="chip" href="#">Radio group</a><a class="chip" href="#">Switch</a><a class="chip" href="#">Segmented control</a><a class="chip" href="#">Select</a><a class="chip" href="#">Combo box</a><span class="chip chip-soon">Tag input</span>
+            </div>
+          </div>
+          <div class="card catalog-group">
+            <p class="eyebrow">Dates and media</p>
+            <div class="chips">
+              <a class="chip" href="#">Date picker</a><a class="chip chip-new" href="#">Date range picker</a><span class="chip chip-soon">Time field</span><span class="chip chip-soon">Color field</span><span class="chip chip-soon">Icon picker</span><span class="chip chip-soon">Media input</span><span class="chip chip-soon">Slider</span><span class="chip chip-soon">Rich text</span>
+            </div>
+          </div>
+          <div class="card catalog-group">
+            <p class="eyebrow">Lists and data</p>
+            <div class="chips">
+              <a class="chip chip-new" href="#">Data table</a><span class="chip chip-soon">Sortable list</span><span class="chip chip-soon">Tree builder</span><span class="chip chip-soon">Master detail</span><span class="chip chip-soon">Transfer list</span><a class="chip" href="#">Stat tile</a><a class="chip" href="#">Empty state</a><a class="chip chip-new" href="#">Charts</a>
+            </div>
+          </div>
+          <div class="card catalog-group">
+            <p class="eyebrow">Overlays and shell</p>
+            <div class="chips">
+              <a class="chip" href="#">Dialog</a><a class="chip" href="#">Toast</a><a class="chip" href="#">Tooltip</a><a class="chip" href="#">Menu</a><a class="chip" href="#">Drawer</a><a class="chip" href="#">Command palette</a><a class="chip" href="#">Sidebar</a><a class="chip" href="#">Save bar</a>
+            </div>
+          </div>
+        </div>
+        <p class="catalog-legend">Dashed chips are on the roadmap. Everything else has a page.</p>
+      </section>
+
+      <section class="cta">
+        <span class="watermark" aria-hidden="true">snapshot</span>
+        <div class="cta-inner">
+          <p class="eyebrow">Open source, MIT</p>
+          <h2 class="type-h2">Start with a button. Ship the whole settings page.</h2>
+          <div class="row">
+            <a class="button button-large" href="./component.html">Read the docs</a>
+            <a class="button button-secondary button-large" href="#">Star on GitHub</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer" data-theme="dark">
+      <div class="page">
+        <h2 class="type-h2">Everything you need to build a calm product, whenever you need it.</h2>
+        <div class="footer-cols">
+          <details class="footer-col" open><summary>Docs</summary><div class="footer-links"><a href="#">Introduction</a><a href="#">Installation</a><a href="#">Theming</a><a href="#">Routing</a><a href="#">Design principles</a></div></details>
+          <details class="footer-col" open><summary>Components</summary><div class="footer-links"><a href="#">All components</a><a href="#">Forms</a><a href="#">Overlays</a><a href="#">Data and charts</a><a href="#">App shell</a></div></details>
+          <details class="footer-col" open><summary>Community</summary><div class="footer-links"><a href="#">GitHub &#8599;</a><a href="#">Discussions &#8599;</a><a href="#">Contributing</a><a href="#">Code of conduct</a></div></details>
+          <details class="footer-col" open><summary>Project</summary><div class="footer-links"><a href="#">Changelog</a><a href="#">Security</a><a href="#">MIT License</a></div></details>
+        </div>
+        <div class="footer-bottom">
+          <span>&#169; 2026 Snapshot UI. Released under the MIT License.</span>
+          <span>Built on React Aria</span>
+        </div>
+      </div>
+    </footer>
+
+    <div class="mock-bar" role="group" aria-label="Mockup options">
+      <b>Mockup v2</b>
+      <div class="mock-bar-group">
+        Theme axes
+        <div class="segmented segmented-small" role="radiogroup" aria-label="Theme axes option">
+          <label class="segmented-option"><input type="radio" name="mock-axes" value="a" checked />A: live</label>
+          <label class="segmented-option"><input type="radio" name="mock-axes" value="b" />B: matrix</label>
+        </div>
+      </div>
+      <div class="mock-bar-group">
+        Headings
+        <div class="segmented segmented-small" role="radiogroup" aria-label="Heading widths">
+          <label class="segmented-option"><input type="radio" name="mock-headings" value="new" checked />New</label>
+          <label class="segmented-option"><input type="radio" name="mock-headings" value="old" />Old</label>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const root = document.documentElement;
+      // ?theme=dark&shape=soft opens the mockup in that state.
+      const params = new URLSearchParams(location.search);
+      if (params.get('theme')) root.dataset.theme = params.get('theme');
+      if (params.get('shape')) root.dataset.shape = params.get('shape');
+      // Reflect the current attributes in the switches, so a page opened in dark or soft shows it.
+      document.querySelectorAll('input[name="theme"], input[name="shape"]').forEach((radio) => {
+        radio.checked = root.dataset[radio.name] === radio.value;
+      });
+      document.querySelectorAll('input[name="shape"]').forEach((radio) => {
+        radio.addEventListener('change', () => (root.dataset.shape = radio.value));
+      });
+      const menu = document.querySelector('.nav-menu');
+      const overlay = document.getElementById('nav-overlay');
+      const setMenu = (open) => {
+        overlay.hidden = !open;
+        menu.setAttribute('aria-expanded', String(open));
+        document.body.style.overflow = open ? 'hidden' : '';
+        (open ? overlay.querySelector('.nav-close') : menu).focus();
+      };
+      menu.addEventListener('click', () => setMenu(true));
+      overlay.querySelector('.nav-close').addEventListener('click', () => setMenu(false));
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !overlay.hidden) setMenu(false);
+      });
+      // Footer columns fold on phones and stay open everywhere else.
+      if (matchMedia('(width < 768px)').matches) {
+        document.querySelectorAll('.footer-col').forEach((col) => col.removeAttribute('open'));
+      }
+      document.querySelector('[data-toggle-theme]').addEventListener('click', () => {
+        root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+      });
+      document.querySelectorAll('.switch').forEach((sw) => {
+        sw.addEventListener('click', () => sw.setAttribute('aria-checked', String(sw.getAttribute('aria-checked') !== 'true')));
+      });
+      // v2: ?axes=b and ?headings=old open the mockup in that state.
+      const stage = document.querySelector('.axes-stage');
+      const setAxes = (value) => (root.dataset.axes = value);
+      const setHeadings = (value) => root.classList.toggle('old-headings', value === 'old');
+      setAxes(params.get('axes') === 'b' ? 'b' : 'a');
+      setHeadings(params.get('headings'));
+      document.querySelectorAll('input[name="mock-axes"]').forEach((radio) => {
+        radio.checked = radio.value === root.dataset.axes;
+        radio.addEventListener('change', () => setAxes(radio.value));
+      });
+      document.querySelectorAll('input[name="mock-headings"]').forEach((radio) => {
+        radio.checked = radio.value === (params.get('headings') === 'old' ? 'old' : 'new');
+        radio.addEventListener('change', () => setHeadings(radio.value));
+      });
+      ['theme', 'shape'].forEach((axis) => {
+        document.querySelectorAll(`input[name="axes-${axis}"]`).forEach((radio) => {
+          radio.addEventListener('change', () => {
+            stage.dataset[axis] = radio.value;
+            document.querySelector(`[data-axes-out="${axis}"]`).textContent = radio.value;
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
